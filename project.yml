@@ -1,0 +1,98 @@
+name: Ironlog
+
+options:
+  bundleIdPrefix: com.ironlog
+  deploymentTarget:
+    iOS: "26.0"
+    watchOS: "26.0"
+  createIntermediateGroups: true
+
+settings:
+  base:
+    SWIFT_VERSION: "5.0"
+    MARKETING_VERSION: "0.1.0"
+    CURRENT_PROJECT_VERSION: "1"
+    CODE_SIGN_STYLE: Manual
+    DEVELOPMENT_TEAM: ""
+    ENABLE_USER_SCRIPT_SANDBOXING: NO
+
+targets:
+  Ironlog:
+    type: application
+    platform: iOS
+    sources:
+      - App
+      - Shared
+    info:
+      path: App/Info.plist
+      properties:
+        CFBundleDisplayName: Ironlog
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        UILaunchScreen: {}
+        UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait]
+        NSHealthShareUsageDescription: Ironlog reads your workouts and heart rate to show your training history.
+        NSHealthUpdateUsageDescription: Ironlog saves your strength workouts to Apple Health.
+    entitlements:
+      path: App/Ironlog.entitlements
+      properties:
+        com.apple.developer.healthkit: true
+        com.apple.developer.healthkit.access: []
+        com.apple.security.application-groups: [group.com.ironlog.shared]
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.ironlog.app
+        TARGETED_DEVICE_FAMILY: "1"
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+    dependencies:
+      - target: IronlogWidget
+
+  IronlogWidget:
+    type: app-extension
+    platform: iOS
+    sources:
+      - Widget
+      - Shared
+    info:
+      path: Widget/Info.plist
+      properties:
+        CFBundleDisplayName: Ironlog
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.widgetkit-extension
+    entitlements:
+      path: Widget/IronlogWidget.entitlements
+      properties:
+        com.apple.security.application-groups: [group.com.ironlog.shared]
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.ironlog.app.widget
+        TARGETED_DEVICE_FAMILY: "1"
+
+  # Built separately and copied into Ironlog.app/Watch by the workflow.
+  IronlogWatch:
+    type: application
+    platform: watchOS
+    sources:
+      - Watch
+      - Shared
+    info:
+      path: Watch/Info.plist
+      properties:
+        CFBundleDisplayName: Ironlog
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        WKApplication: true
+        WKCompanionAppBundleIdentifier: com.ironlog.app
+        NSHealthShareUsageDescription: Ironlog reads heart rate during workouts.
+        NSHealthUpdateUsageDescription: Ironlog saves your strength workouts to Apple Health.
+    entitlements:
+      path: Watch/IronlogWatch.entitlements
+      properties:
+        com.apple.developer.healthkit: true
+        com.apple.developer.healthkit.access: []
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.ironlog.app.watchkitapp
+        TARGETED_DEVICE_FAMILY: "4"
