@@ -9,8 +9,8 @@ permissions:
   contents: write
 
 env:
-  # SideStore appends your Apple team ID to bundle IDs but leaves the Watch app's
-  # companion ID alone, so the full IPA bakes the renamed ID in ahead of time.
+  # SideStore appends your Apple team ID to the app's bundle ID but leaves the Watch
+  # app's IDs alone, so the full IPA bakes the renamed IDs in ahead of time.
   SIDESTORE_TEAM_ID: 9A8T35KRG6
 
 jobs:
@@ -70,8 +70,9 @@ jobs:
           cp -R "$APP" stage/Payload/
           mkdir -p stage/Payload/Ironlog.app/Watch
           cp -R "$WATCH" stage/Payload/Ironlog.app/Watch/
-          /usr/libexec/PlistBuddy -c "Set :WKCompanionAppBundleIdentifier com.ironlog.app.${SIDESTORE_TEAM_ID}" \
-            stage/Payload/Ironlog.app/Watch/IronlogWatch.app/Info.plist
+          WPLIST=stage/Payload/Ironlog.app/Watch/IronlogWatch.app/Info.plist
+          /usr/libexec/PlistBuddy -c "Set :WKCompanionAppBundleIdentifier com.ironlog.app.${SIDESTORE_TEAM_ID}" "$WPLIST"
+          /usr/libexec/PlistBuddy -c "Set :CFBundleIdentifier com.ironlog.app.${SIDESTORE_TEAM_ID}.watchkitapp" "$WPLIST"
           codesign -f -s - --entitlements Widget/IronlogWidget.entitlements stage/Payload/Ironlog.app/PlugIns/IronlogWidget.appex
           codesign -f -s - --entitlements Watch/IronlogWatch.entitlements stage/Payload/Ironlog.app/Watch/IronlogWatch.app
           codesign -f -s - --entitlements App/Ironlog.entitlements stage/Payload/Ironlog.app
@@ -92,7 +93,7 @@ jobs:
             echo "::notice title=Bundles::$(cd stage/Payload && find . -maxdepth 4 \( -name '*.app' -o -name '*.appex' \) | tr '\n' ' ')"
             echo "::notice title=Sizes::$(ls -la out | awk 'NR>1{print $5, $9}' | tr '\n' ' ')"
             W=stage/Payload/Ironlog.app/Watch/IronlogWatch.app
-            echo "::notice title=Watch plist::companion=$(/usr/libexec/PlistBuddy -c 'Print :WKCompanionAppBundleIdentifier' $W/Info.plist) archs=$(lipo -archs $W/IronlogWatch)"
+            echo "::notice title=Watch plist::companion=$(/usr/libexec/PlistBuddy -c 'Print :WKCompanionAppBundleIdentifier' $W/Info.plist) id=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' $W/Info.plist) archs=$(lipo -archs $W/IronlogWatch)"
             echo "::notice title=App entitlements::$(codesign -d --entitlements - --xml stage/Payload/Ironlog.app 2>/dev/null | tr -d '\n\t' | head -c 600)"
           fi
 
