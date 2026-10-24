@@ -7,13 +7,21 @@ import Foundation
 enum SharedStore {
     static let fallbackGroup = "group.com.ironlog.shared"
 
-    static var groupID: String {
-        if let groups = Bundle.main.object(forInfoDictionaryKey: "ALTAppGroups") as? [String],
-           let first = groups.first {
-            return first
-        }
-        return fallbackGroup
+    /// Every App Group ID worth trying, most likely first.
+    static var candidateGroups: [String] {
+        var list = Provisioning.appGroups.filter { $0.hasPrefix(fallbackGroup) } + Provisioning.appGroups
+        if let alt = Bundle.main.object(forInfoDictionaryKey: "ALTAppGroups") as? [String] { list += alt }
+        if let team = Provisioning.teamID { list.append("\(fallbackGroup).\(team)") }
+        list.append(fallbackGroup)
+        var seen = Set<String>()
+        return list.filter { seen.insert($0).inserted }
     }
+
+    static let groupID: String = {
+        candidateGroups.first {
+            FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: $0) != nil
+        } ?? fallbackGroup
+    }()
 
     static var groupWorks: Bool {
         FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: groupID) != nil

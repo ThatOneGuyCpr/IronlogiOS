@@ -153,8 +153,11 @@ struct ContentView: View {
             VStack(alignment: .leading, spacing: 12) {
                 CheckRow(title: "Widget data", detail: SharedStore.groupWorks
                          ? "Shared container OK (\(SharedStore.groupID))"
-                         : "No shared container for \(SharedStore.groupID)",
+                         : "No shared container. Tried: \(SharedStore.candidateGroups.joined(separator: ", "))",
                          ok: SharedStore.groupWorks)
+                CheckRow(title: "Signing profile", detail: Provisioning.summary
+                         + (Provisioning.appGroups.isEmpty ? "" : "\nGroups: \(Provisioning.appGroups.joined(separator: ", "))"),
+                         ok: Provisioning.hasHealthKit && !Provisioning.appGroups.isEmpty)
                 CheckRow(title: "Apple Watch", detail: watch.status,
                          ok: watch.status == "Watch app installed")
                 CheckRow(title: "Apple Health", detail: health.status,
