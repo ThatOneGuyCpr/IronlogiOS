@@ -8,6 +8,11 @@ on:
 permissions:
   contents: write
 
+env:
+  # SideStore appends your Apple team ID to bundle IDs but leaves the Watch app's
+  # companion ID alone, so the full IPA bakes the renamed ID in ahead of time.
+  SIDESTORE_TEAM_ID: 9A8T35KRG6
+
 jobs:
   build:
     runs-on: macos-26
@@ -65,6 +70,8 @@ jobs:
           cp -R "$APP" stage/Payload/
           mkdir -p stage/Payload/Ironlog.app/Watch
           cp -R "$WATCH" stage/Payload/Ironlog.app/Watch/
+          /usr/libexec/PlistBuddy -c "Set :WKCompanionAppBundleIdentifier com.ironlog.app.${SIDESTORE_TEAM_ID}" \
+            stage/Payload/Ironlog.app/Watch/IronlogWatch.app/Info.plist
           codesign -f -s - --entitlements Widget/IronlogWidget.entitlements stage/Payload/Ironlog.app/PlugIns/IronlogWidget.appex
           codesign -f -s - --entitlements Watch/IronlogWatch.entitlements stage/Payload/Ironlog.app/Watch/IronlogWatch.app
           codesign -f -s - --entitlements App/Ironlog.entitlements stage/Payload/Ironlog.app
