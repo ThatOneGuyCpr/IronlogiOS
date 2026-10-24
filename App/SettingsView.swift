@@ -12,6 +12,21 @@ struct SettingsView: View {
     var body: some View {
         NavigationStack {
             Form {
+                Section("Look and goals") {
+                    Picker("Appearance", selection: $store.data.appearance) {
+                        ForEach(Appearance.allCases) { a in
+                            Text(a.label).tag(a.rawValue)
+                        }
+                    }
+                    Stepper("Workouts per week: \(store.data.weeklyTarget)", value: $store.data.weeklyTarget, in: 1...7)
+                }
+
+                Section("What's open by default") {
+                    EquipmentChips()
+                        .listRowBackground(Color.clear)
+                        .listRowInsets(EdgeInsets(top: 4, leading: 0, bottom: 4, trailing: 0))
+                }
+
                 Section("Exercises") {
                     NavigationLink("Sets, reps and rest") { ExerciseListView() }
                     NavigationLink {

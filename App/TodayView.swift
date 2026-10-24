@@ -3,34 +3,111 @@ import SwiftUI
 struct TodayView: View {
     @EnvironmentObject private var store: Store
     @EnvironmentObject private var rest: RestController
+    @State private var showEquipment = false
 
     var body: some View {
-        NavigationStack {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 24) {
-                    routineGrid
-                    equipmentSection
-                    planSection
-                }
-                .padding(.horizontal, 16)
-                .padding(.bottom, 24)
+        ScrollView {
+            VStack(alignment: .leading, spacing: 16) {
+                header
+                heroCard
+                weekCard
+                routinePicker
+                lineupCard
             }
-            .background { SkyBackground() }
-            .navigationTitle("Train")
-            .safeAreaInset(edge: .bottom) {
-                Button {
-                    start()
-                } label: {
-                    Text("Start \(store.todayRoutine.title)")
-                        .font(.headline)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 6)
-                }
-                .buttonStyle(.glassProminent)
-                .padding(.horizontal, 16)
-                .padding(.bottom, 8)
-            }
+            .padding(.horizontal, 20)
+            .padding(.top, 8)
+            .padding(.bottom, 32)
         }
+        .background { SkyBackground() }
+        .sheet(isPresented: $showEquipment) {
+            EquipmentSheet()
+                .presentationDetents([.medium, .large])
+        }
+    }
+
+    // MARK: Header
+
+    private var header: some View {
+        HStack(alignment: .bottom) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(Date().formatted(.dateTime.weekday(.wide).month(.abbreviated).day()))
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(Theme.sub)
+                Text("Train")
+                    .font(.system(size: 34, weight: .heavy))
+                    .foregroundStyle(Theme.ink)
+            }
+            Spacer()
+            Button {
+                showEquipment = true
+            } label: {
+                Image(systemName: "dumbbell")
+                    .font(.system(size: 18, weight: .semibold))
+                    .frame(width: 44, height: 44)
+            }
+            .buttonStyle(.glass)
+            .buttonBorderShape(.circle)
+            .accessibilityLabel("What's open")
+        }
+    }
+
+    // MARK: Up next
+
+    private var heroCard: some View {
+        let routine = store.todayRoutine
+        let picks = store.plan(routine)
+        let taken = Equipment.allCases.filter { !store.data.open.contains($0) }
+        let lastText: String = {
+            if let d = store.lastDone(routine) {
+                return "Last done " + d.formatted(.dateTime.weekday(.abbreviated))
+            }
+            return "Not done yet"
+        }()
+        return VStack(alignment: .leading, spacing: 14) {
+            HStack {
+                Pill(text: routine == store.nextRoutine ? "UP NEXT" : "PICKED")
+                Spacer()
+                Text(lastText)
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundStyle(Theme.sub)
+            }
+            VStack(alignment: .leading, spacing: 2) {
+                Text(routine.title)
+                    .font(.system(size: 32, weight: .heavy))
+                    .foregroundStyle(Theme.ink)
+                Text(routine.subtitle)
+                    .font(.system(size: 15))
+                    .foregroundStyle(Theme.sub)
+            }
+            HStack(spacing: 16) {
+                meta("list.bullet", "\(picks.compactMap { $0 }.count) exercises")
+                meta("clock", "About \(store.estimatedMinutes(routine)) min")
+                Button {
+                    showEquipment = true
+                } label: {
+                    meta(taken.isEmpty ? "checkmark" : "exclamationmark.circle",
+                         taken.isEmpty ? "All gear open" : "\(taken.count) taken")
+                }
+                .buttonStyle(.plain)
+            }
+            Button {
+                start()
+            } label: {
+                Label("Start workout", systemImage: "play.fill")
+            }
+            .buttonStyle(PrimaryButtonStyle())
+        }
+        .glacierCard(radius: 28, padding: 20)
+    }
+
+    private func meta(_ icon: String, _ text: String) -> some View {
+        HStack(spacing: 5) {
+            Image(systemName: icon).font(.system(size: 12, weight: .bold))
+            Text(text)
+        }
+        .font(.system(size: 13, weight: .semibold))
+        .foregroundStyle(Theme.sub)
+        .lineLimit(1)
     }
 
     private func start() {
@@ -41,158 +118,175 @@ struct TodayView: View {
         rest.beginWorkout(routine: s.routine.title, startedAt: s.start, first: first)
     }
 
-    // MARK: Routine
+    // MARK: Week
 
-    private var routineGrid: some View {
-        let next = store.nextRoutine
-        let selected = store.todayRoutine
-        return VStack(alignment: .leading, spacing: 10) {
-            SectionTitle("Routine")
-            GlassEffectContainer(spacing: 12) {
-                LazyVGrid(columns: [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)], spacing: 12) {
-                    ForEach(RoutineID.allCases) { r in
-                        Button {
-                            withAnimation(.snappy) { store.data.selectedRoutine = r }
-                        } label: {
-                            VStack(alignment: .leading, spacing: 4) {
-                                HStack {
-                                    Text(r.title).font(.headline)
-                                    Spacer(minLength: 0)
-                                    if r == next {
-                                        Text("Up next")
-                                            .font(.caption2.weight(.bold))
-                                            .padding(.horizontal, 7)
-                                            .padding(.vertical, 3)
-                                            .background(Theme.accent, in: Capsule())
-                                            .foregroundStyle(Color.white)
-                                    }
-                                }
-                                Text(lastText(r))
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                                    .lineLimit(1)
-                            }
-                            .padding(14)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .contentShape(Rectangle())
-                            .glassEffect(
-                                r == selected ? Glass.regular.tint(Theme.sky.opacity(0.5)).interactive() : Glass.regular.interactive(),
-                                in: .rect(cornerRadius: 20)
-                            )
-                        }
-                        .buttonStyle(.plain)
+    private var weekCard: some View {
+        let done = store.entriesThisWeek().count
+        return VStack(alignment: .leading, spacing: 12) {
+            HStack(alignment: .firstTextBaseline) {
+                SectionTitle("This week")
+                Spacer()
+                Text("\(done) of \(store.data.weeklyTarget) done")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(Theme.sub)
+            }
+            HStack(spacing: 0) {
+                ForEach(store.weekDays()) { day in
+                    VStack(spacing: 6) {
+                        Text(day.letter)
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundStyle(Theme.sub)
+                        dayDot(day)
                     }
+                    .frame(maxWidth: .infinity)
                 }
             }
         }
+        .glacierCard(padding: 16)
     }
 
-    private func lastText(_ r: RoutineID) -> String {
-        if let d = store.lastDone(r) {
-            return "Last: " + d.formatted(.dateTime.weekday(.abbreviated).month(.abbreviated).day())
+    @ViewBuilder
+    private func dayDot(_ day: Store.DayDot) -> some View {
+        if day.done {
+            Circle()
+                .fill(Theme.accent)
+                .frame(width: 32, height: 32)
+                .overlay(Image(systemName: "checkmark").font(.system(size: 13, weight: .heavy)).foregroundStyle(Theme.accentInk))
+        } else if day.isToday {
+            Circle()
+                .strokeBorder(Theme.accent, lineWidth: 2)
+                .frame(width: 32, height: 32)
+        } else {
+            Circle()
+                .fill(Theme.faint)
+                .frame(width: 32, height: 32)
         }
-        return r.subtitle
     }
 
-    // MARK: Equipment
+    // MARK: Routine picker
 
-    private var equipmentSection: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            SectionTitle("What's open")
-            EquipmentChips()
-            Text("Tap anything that's taken. The workout below rebuilds itself.")
-                .font(.caption)
-                .foregroundStyle(.secondary)
+    private var routinePicker: some View {
+        let selected = store.todayRoutine
+        return HStack(spacing: 6) {
+            ForEach(RoutineID.cycle) { r in
+                Button {
+                    withAnimation(.snappy) { store.data.selectedRoutine = r }
+                } label: {
+                    Text(r.title)
+                        .font(.system(size: 13, weight: .bold))
+                        .frame(maxWidth: .infinity, minHeight: 40)
+                        .background(r == selected ? Theme.accent : Color.clear, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                        .foregroundStyle(r == selected ? Theme.accentInk : Theme.sub)
+                }
+                .buttonStyle(.plain)
+                .accessibilityAddTraits(r == selected ? .isSelected : [])
+            }
         }
+        .padding(5)
+        .background(Theme.card, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).stroke(Theme.cardBorder, lineWidth: 1))
     }
 
-    // MARK: Plan
+    // MARK: Lineup
 
-    private var planSection: some View {
+    private var lineupCard: some View {
         let routine = store.todayRoutine
         let picks = store.plan(routine)
-        return VStack(alignment: .leading, spacing: 10) {
-            SectionTitle("\(routine.title) workout")
-            VStack(spacing: 0) {
-                ForEach(Array(routine.slots.enumerated()), id: \.offset) { i, slot in
-                    if i > 0 { Divider().padding(.leading, 46) }
-                    PlanRow(index: i + 1, slot: slot, exercise: picks[i])
-                }
+        return VStack(alignment: .leading, spacing: 0) {
+            HStack {
+                SectionTitle("Today's lineup")
+                Spacer()
+                Button("What's open") { showEquipment = true }
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(Theme.accentText)
             }
-            .glassEffect(.regular, in: .rect(cornerRadius: 22))
+            .padding(.horizontal, 18)
+            .padding(.top, 16)
+            .padding(.bottom, 6)
+            ForEach(Array(routine.slots.enumerated()), id: \.offset) { i, slot in
+                LineupRow(index: i + 1, slot: slot, exercise: picks[i])
+            }
         }
+        .glacierCard(padding: 0)
     }
 }
 
-struct EquipmentChips: View {
-    @EnvironmentObject private var store: Store
-
-    var body: some View {
-        GlassEffectContainer(spacing: 8) {
-            LazyVGrid(columns: [GridItem(.adaptive(minimum: 150), spacing: 8)], spacing: 8) {
-                ForEach(Equipment.allCases) { eq in
-                    let isOpen = store.data.open.contains(eq)
-                    Button {
-                        withAnimation(.snappy) { store.toggleEquipment(eq) }
-                    } label: {
-                        HStack(spacing: 8) {
-                            Image(systemName: isOpen ? "checkmark.circle.fill" : "xmark.circle")
-                                .foregroundStyle(isOpen ? Theme.accent : Color.secondary)
-                            Text(eq.name)
-                                .font(.subheadline.weight(.medium))
-                                .strikethrough(!isOpen)
-                                .foregroundStyle(isOpen ? Color.primary : Color.secondary)
-                                .lineLimit(1)
-                            Spacer(minLength: 0)
-                        }
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 10)
-                        .contentShape(Capsule())
-                        .glassEffect(
-                            isOpen ? Glass.regular.tint(Theme.sky.opacity(0.35)).interactive() : Glass.regular.interactive(),
-                            in: .capsule
-                        )
-                    }
-                    .buttonStyle(.plain)
-                }
-            }
-        }
-    }
-}
-
-private struct PlanRow: View {
+private struct LineupRow: View {
     @EnvironmentObject private var store: Store
     let index: Int
     let slot: Slot
     let exercise: Exercise?
+    @State private var showClip = false
 
     var body: some View {
-        HStack(alignment: .firstTextBaseline, spacing: 12) {
+        HStack(spacing: 14) {
             Text("\(index)")
-                .font(.subheadline.monospacedDigit())
-                .foregroundStyle(.secondary)
-                .frame(width: 18)
-            VStack(alignment: .leading, spacing: 3) {
+                .font(.system(size: 13, weight: .bold))
+                .frame(width: 28, height: 28)
+                .background(Theme.accentSoft, in: RoundedRectangle(cornerRadius: 9, style: .continuous))
+                .foregroundStyle(Theme.accentText)
+            VStack(alignment: .leading, spacing: 2) {
                 Text(exercise?.name ?? "Nothing open for \(slot.label.lowercased())")
-                    .font(.body.weight(.medium))
-                    .foregroundStyle(exercise == nil ? Color.secondary : Color.primary)
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundStyle(exercise == nil ? Theme.sub : Theme.ink)
                 if let ex = exercise {
-                    Text("\(slot.label) · \(store.prescription(ex.id).summary(for: ex))")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+                    Text(store.prescription(ex.id).short(for: ex) + " rest")
+                        .font(.system(size: 13))
+                        .foregroundStyle(Theme.sub)
                 }
             }
             Spacer(minLength: 0)
-            if let url = exercise?.videoURL {
-                Link(destination: url) {
+            if let ex = exercise {
+                Button {
+                    showClip = true
+                } label: {
                     Image(systemName: "play.circle.fill")
-                        .font(.title2)
-                        .foregroundStyle(Theme.accent)
+                        .font(.system(size: 28))
+                        .symbolRenderingMode(.palette)
+                        .foregroundStyle(Theme.accentInk, Theme.accent)
                 }
-                .accessibilityLabel("Watch form video")
+                .buttonStyle(.plain)
+                .accessibilityLabel("Form video for \(ex.name)")
+                .sheet(isPresented: $showClip) {
+                    ClipPlayerSheet(exercise: ex, source: Clips.source(for: ex.id))
+                }
             }
         }
-        .padding(.horizontal, 16)
+        .padding(.horizontal, 18)
         .padding(.vertical, 12)
+        .overlay(alignment: .top) {
+            Rectangle().fill(Theme.faint).frame(height: 1)
+        }
+    }
+}
+
+/// Equipment toggles as chips (used in Settings).
+struct EquipmentChips: View {
+    @EnvironmentObject private var store: Store
+
+    var body: some View {
+        LazyVGrid(columns: [GridItem(.adaptive(minimum: 150), spacing: 8)], spacing: 8) {
+            ForEach(Equipment.allCases) { eq in
+                let isOpen = store.data.open.contains(eq)
+                Button {
+                    withAnimation(.snappy) { store.toggleEquipment(eq) }
+                } label: {
+                    HStack(spacing: 8) {
+                        Image(systemName: isOpen ? "checkmark.circle.fill" : "xmark.circle")
+                            .foregroundStyle(isOpen ? Theme.accent : Theme.sub)
+                        Text(eq.name)
+                            .font(.system(size: 14, weight: .semibold))
+                            .strikethrough(!isOpen)
+                            .foregroundStyle(isOpen ? Theme.ink : Theme.sub)
+                            .lineLimit(1)
+                        Spacer(minLength: 0)
+                    }
+                    .padding(.horizontal, 12)
+                    .frame(minHeight: 44)
+                    .background(isOpen ? Theme.accentSoft : Theme.chip, in: Capsule())
+                }
+                .buttonStyle(.plain)
+            }
+        }
     }
 }

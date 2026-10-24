@@ -6,11 +6,16 @@ struct IronlogApp: App {
     @StateObject private var rest = RestController()
     @Environment(\.scenePhase) private var phase
 
+    init() {
+        Clips.configureAudio()
+    }
+
     var body: some Scene {
         WindowGroup {
             RootView()
                 .environmentObject(store)
                 .environmentObject(rest)
+                .preferredColorScheme((Appearance(rawValue: store.data.appearance) ?? .system).scheme)
                 .onOpenURL { _ in
                     // Shortcuts sends us back here after saving to Health.
                 }
@@ -28,6 +33,9 @@ struct RootView: View {
         TabView {
             Tab("Train", systemImage: "dumbbell.fill") {
                 TrainTab()
+            }
+            Tab("Progress", systemImage: "chart.bar.fill") {
+                ProgressTab()
             }
             Tab("History", systemImage: "clock.arrow.circlepath") {
                 HistoryView()

@@ -10,7 +10,7 @@ options:
 settings:
   base:
     SWIFT_VERSION: "5.0"
-    MARKETING_VERSION: "0.2.0"
+    MARKETING_VERSION: "0.3.0"
     CURRENT_PROJECT_VERSION: "1"
     CODE_SIGN_STYLE: Manual
     DEVELOPMENT_TEAM: ""
@@ -24,6 +24,8 @@ targets:
       - App
       - Shared
       - LiveActivity
+      - path: Videos
+        type: folder
     info:
       path: App/Info.plist
       properties:

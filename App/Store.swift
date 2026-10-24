@@ -72,6 +72,12 @@ struct AppData: Codable {
     var selectedRoutine: RoutineID? = nil
     var healthViaShortcut = false
     var shortcutName = "Ironlog to Health"
+    /// Weight to load next time, set when you accept a move-up prompt.
+    var pendingWeight: [String: Double] = [:]
+    /// Move-up prompts dismissed until the exercise reaches this many sessions.
+    var snoozed: [String: Int] = [:]
+    var appearance: String = "system"
+    var weeklyTarget: Int = 4
 
     init() {}
 
@@ -87,6 +93,10 @@ struct AppData: Codable {
         selectedRoutine = try c.decodeIfPresent(RoutineID.self, forKey: .selectedRoutine)
         healthViaShortcut = try c.decodeIfPresent(Bool.self, forKey: .healthViaShortcut) ?? d.healthViaShortcut
         shortcutName = try c.decodeIfPresent(String.self, forKey: .shortcutName) ?? d.shortcutName
+        pendingWeight = try c.decodeIfPresent([String: Double].self, forKey: .pendingWeight) ?? d.pendingWeight
+        snoozed = try c.decodeIfPresent([String: Int].self, forKey: .snoozed) ?? d.snoozed
+        appearance = try c.decodeIfPresent(String.self, forKey: .appearance) ?? d.appearance
+        weeklyTarget = try c.decodeIfPresent(Int.self, forKey: .weeklyTarget) ?? d.weeklyTarget
     }
 }
 
@@ -253,10 +263,15 @@ final class Store: ObservableObject {
         let sug = suggestion(id)
         return (0..<max(1, p.sets)).map { i in
             var s = SetLog()
+            if sug == nil, let pending = data.pendingWeight[id] {
+                s.weight = Store.fmt(pending)
+            }
             if let sug {
                 var prev: HistorySet? = nil
                 if i < sug.sets.count { prev = sug.sets[i] } else { prev = sug.sets.last }
-                if let next = sug.nextWeight {
+                if let pending = data.pendingWeight[id] {
+                    s.weight = Store.fmt(pending)
+                } else if let next = sug.nextWeight {
                     s.weight = Store.fmt(next)
                 } else if let prev, prev.weight > 0 {
                     s.weight = Store.fmt(prev.weight)
@@ -426,6 +441,7 @@ final class Store: ObservableObject {
         let entry = HistoryEntry(id: UUID().uuidString, date: s.start, routine: s.routine,
                                  duration: Date().timeIntervalSince(s.start), items: items)
         data.history.insert(entry, at: 0)
+        for item in items { data.pendingWeight[item.exerciseID] = nil }
         syncWidget()
         saveNow()
         lastFinished = entry
@@ -454,6 +470,144 @@ final class Store: ObservableObject {
             SharedStore.defaults.removeObject(forKey: "lastDate")
         }
         WidgetCenter.shared.reloadAllTimelines()
+    }
+
+    /// Last time's sets for the LAST column.
+    func lastSet(_ id: String, _ j: Int) -> String {
+        guard let ex = Library.byID[id], let last = lastPerformance(id) else { return "–" }
+        guard let s = last.sets[safe: j] ?? last.sets.last else { return "–" }
+        if ex.timed { return "\(s.reps)s" }
+        return s.weight > 0 ? "\(Store.fmt(s.weight)) × \(s.reps)" : "\(s.reps)"
+    }
+
+    /// Weight to suggest in the nudge chip, if any.
+    func nudgeWeight(_ id: String) -> Double? {
+        data.pendingWeight[id] ?? suggestion(id)?.nextWeight
+    }
+
+    // MARK: Week and progress
+
+    var weekCalendar: Calendar {
+        var cal = Calendar.current
+        cal.firstWeekday = 2
+        return cal
+    }
+
+    func entriesThisWeek() -> [HistoryEntry] {
+        guard let week = weekCalendar.dateInterval(of: .weekOfYear, for: Date()) else { return [] }
+        return data.history.filter { week.contains($0.date) }
+    }
+
+    func weekStreak() -> Int {
+        let cal = weekCalendar
+        guard var start = cal.dateInterval(of: .weekOfYear, for: Date())?.start else { return 0 }
+        let starts = Set(data.history.compactMap { cal.dateInterval(of: .weekOfYear, for: $0.date)?.start })
+        if !starts.contains(start), let prev = cal.date(byAdding: .weekOfYear, value: -1, to: start) { start = prev }
+        var streak = 0
+        while starts.contains(start) {
+            streak += 1
+            guard let prev = cal.date(byAdding: .weekOfYear, value: -1, to: start) else { break }
+            start = prev
+        }
+        return streak
+    }
+
+    struct DayDot: Identifiable {
+        let id: Int
+        let letter: String
+        let done: Bool
+        let isToday: Bool
+        let isFuture: Bool
+    }
+
+    func weekDays() -> [DayDot] {
+        let cal = weekCalendar
+        guard let start = cal.dateInterval(of: .weekOfYear, for: Date())?.start else { return [] }
+        let letters = ["M", "T", "W", "T", "F", "S", "S"]
+        return (0..<7).compactMap { i in
+            guard let day = cal.date(byAdding: .day, value: i, to: start) else { return nil }
+            let done = data.history.contains { cal.isDate($0.date, inSameDayAs: day) }
+            let today = cal.isDateInToday(day)
+            return DayDot(id: i, letter: letters[i], done: done, isToday: today, isFuture: !today && day > Date())
+        }
+    }
+
+    func estimatedMinutes(_ routine: RoutineID) -> Int {
+        let seconds = plan(routine).compactMap { $0 }.reduce(0) { total, ex in
+            let p = prescription(ex.id)
+            return total + p.sets * (45 + p.rest)
+        }
+        return max(5, Int((Double(seconds) / 300).rounded()) * 5)
+    }
+
+    struct StallPrompt: Identifiable {
+        let id: String
+        let name: String
+        let weight: Double
+        let sessions: Int
+        let next: Double
+    }
+
+    /// Exercises stuck at the same top weight for `threshold` sessions in a row.
+    func stallPrompts(threshold: Int = 6) -> [StallPrompt] {
+        var seen = Set<String>()
+        var out: [StallPrompt] = []
+        for entry in data.history {
+            for item in entry.items {
+                if seen.contains(item.exerciseID) { continue }
+                seen.insert(item.exerciseID)
+                guard let ex = Library.byID[item.exerciseID], !ex.timed, data.pendingWeight[ex.id] == nil else { continue }
+                let tops: [Double] = data.history.compactMap { e in
+                    guard let it = e.items.first(where: { $0.exerciseID == ex.id }) else { return nil }
+                    return it.sets.map { $0.weight }.max() ?? 0
+                }
+                guard let w = tops.first, w > 0 else { continue }
+                let run = tops.prefix { $0 == w }.count
+                if run >= threshold && tops.count >= (data.snoozed[ex.id] ?? 0) {
+                    out.append(StallPrompt(id: ex.id, name: ex.name, weight: w, sessions: run, next: w + ex.increment))
+                }
+            }
+        }
+        return out
+    }
+
+    func acceptStall(_ p: StallPrompt) {
+        data.pendingWeight[p.id] = p.next
+    }
+
+    func snoozeStall(_ p: StallPrompt) {
+        let count = data.history.filter { $0.items.contains { $0.exerciseID == p.id } }.count
+        data.snoozed[p.id] = count + 3
+    }
+
+    struct TrendPoint: Identifiable {
+        let id: Int
+        let date: Date
+        let weight: Double
+    }
+
+    func trend(_ id: String, limit: Int = 12) -> [TrendPoint] {
+        let points: [(Date, Double)] = data.history.compactMap { e in
+            guard let it = e.items.first(where: { $0.exerciseID == id }) else { return nil }
+            let w = it.sets.map { $0.weight }.max() ?? 0
+            return w > 0 ? (e.date, w) : nil
+        }
+        return Array(points.prefix(limit).reversed()).enumerated().map {
+            TrendPoint(id: $0.offset, date: $0.element.0, weight: $0.element.1)
+        }
+    }
+
+    /// Exercises with at least two weighted sessions, most recent first.
+    func trendExercises() -> [Exercise] {
+        var seen = Set<String>()
+        var out: [Exercise] = []
+        for entry in data.history {
+            for item in entry.items where !seen.contains(item.exerciseID) {
+                seen.insert(item.exerciseID)
+                if let ex = Library.byID[item.exerciseID], trend(ex.id).count >= 2 { out.append(ex) }
+            }
+        }
+        return out
     }
 
     // MARK: Apple Health through Shortcuts
