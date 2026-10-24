@@ -10,7 +10,7 @@ options:
 settings:
   base:
     SWIFT_VERSION: "5.0"
-    MARKETING_VERSION: "0.1.0"
+    MARKETING_VERSION: "0.2.0"
     CURRENT_PROJECT_VERSION: "1"
     CODE_SIGN_STYLE: Manual
     DEVELOPMENT_TEAM: ""
@@ -23,6 +23,7 @@ targets:
     sources:
       - App
       - Shared
+      - LiveActivity
     info:
       path: App/Info.plist
       properties:
@@ -31,13 +32,14 @@ targets:
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         UILaunchScreen: {}
         UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait]
-        NSHealthShareUsageDescription: Ironlog reads your workouts and heart rate to show your training history.
-        NSHealthUpdateUsageDescription: Ironlog saves your strength workouts to Apple Health.
+        NSSupportsLiveActivities: true
+        CFBundleURLTypes:
+          - CFBundleURLName: com.ironlog.app
+            CFBundleURLSchemes: [ironlog]
+        LSApplicationQueriesSchemes: [shortcuts]
     entitlements:
       path: App/Ironlog.entitlements
       properties:
-        com.apple.developer.healthkit: true
-        com.apple.developer.healthkit.access: []
         com.apple.security.application-groups: [group.com.ironlog.shared]
     settings:
       base:
@@ -53,6 +55,7 @@ targets:
     sources:
       - Widget
       - Shared
+      - LiveActivity
     info:
       path: Widget/Info.plist
       properties:
@@ -70,7 +73,8 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: com.ironlog.app.widget
         TARGETED_DEVICE_FAMILY: "1"
 
-  # Built separately and copied into Ironlog.app/Watch by the workflow.
+  # Not built by CI: a free SideStore account can't sign a Watch app.
+  # Kept for a future paid developer account.
   IronlogWatch:
     type: application
     platform: watchOS

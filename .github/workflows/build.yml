@@ -8,11 +8,6 @@ on:
 permissions:
   contents: write
 
-env:
-  # SideStore appends your Apple team ID to the app's bundle ID but leaves the Watch
-  # app's IDs alone, so the full IPA bakes the renamed IDs in ahead of time.
-  SIDESTORE_TEAM_ID: 9A8T35KRG6
-
 jobs:
   build:
     runs-on: macos-26
@@ -41,45 +36,15 @@ jobs:
             build 2>&1 | tee ios.log | grep -E "error:|warning: .*\.swift|BUILD (SUCCEEDED|FAILED)" || true
           test -d build/Release-iphoneos/Ironlog.app
 
-      - name: Build Watch app
-        run: |
-          set -o pipefail
-          xcodebuild -project Ironlog.xcodeproj -target IronlogWatch \
-            -configuration Release -sdk watchos \
-            SYMROOT="$PWD/build" \
-            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" \
-            build 2>&1 | tee watch.log | grep -E "error:|warning: .*\.swift|BUILD (SUCCEEDED|FAILED)" || true
-          test -d build/Release-watchos/IronlogWatch.app
-
-      - name: Package IPAs
+      - name: Package IPA
         run: |
           set -e
-          APP=build/Release-iphoneos/Ironlog.app
-          WATCH=build/Release-watchos/IronlogWatch.app
-          mkdir -p out
-
-          # Without the Watch app (fallback if SideStore rejects the Watch part)
-          rm -rf stage && mkdir -p stage/Payload
-          cp -R "$APP" stage/Payload/
+          mkdir -p out stage/Payload
+          cp -R build/Release-iphoneos/Ironlog.app stage/Payload/
           codesign -f -s - --entitlements Widget/IronlogWidget.entitlements stage/Payload/Ironlog.app/PlugIns/IronlogWidget.appex
-          codesign -f -s - --entitlements App/Ironlog.entitlements stage/Payload/Ironlog.app
-          (cd stage && zip -qry ../out/Ironlog-phone-only.ipa Payload)
-
-          # Full app with the Watch app embedded
-          rm -rf stage && mkdir -p stage/Payload
-          cp -R "$APP" stage/Payload/
-          mkdir -p stage/Payload/Ironlog.app/Watch
-          cp -R "$WATCH" stage/Payload/Ironlog.app/Watch/
-          WPLIST=stage/Payload/Ironlog.app/Watch/IronlogWatch.app/Info.plist
-          /usr/libexec/PlistBuddy -c "Set :WKCompanionAppBundleIdentifier com.ironlog.app.${SIDESTORE_TEAM_ID}" "$WPLIST"
-          /usr/libexec/PlistBuddy -c "Set :CFBundleIdentifier com.ironlog.app.${SIDESTORE_TEAM_ID}.watchkitapp" "$WPLIST"
-          codesign -f -s - --entitlements Widget/IronlogWidget.entitlements stage/Payload/Ironlog.app/PlugIns/IronlogWidget.appex
-          codesign -f -s - --entitlements Watch/IronlogWatch.entitlements stage/Payload/Ironlog.app/Watch/IronlogWatch.app
           codesign -f -s - --entitlements App/Ironlog.entitlements stage/Payload/Ironlog.app
           (cd stage && zip -qry ../out/Ironlog.ipa Payload)
-
           ls -la out
-          find stage/Payload -maxdepth 3 -name "*.app*"
 
       - name: Report build contents
         if: always()
@@ -92,8 +57,6 @@ jobs:
           if [ -d stage/Payload ]; then
             echo "::notice title=Bundles::$(cd stage/Payload && find . -maxdepth 4 \( -name '*.app' -o -name '*.appex' \) | tr '\n' ' ')"
             echo "::notice title=Sizes::$(ls -la out | awk 'NR>1{print $5, $9}' | tr '\n' ' ')"
-            W=stage/Payload/Ironlog.app/Watch/IronlogWatch.app
-            echo "::notice title=Watch plist::companion=$(/usr/libexec/PlistBuddy -c 'Print :WKCompanionAppBundleIdentifier' $W/Info.plist) id=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' $W/Info.plist) archs=$(lipo -archs $W/IronlogWatch)"
             echo "::notice title=App entitlements::$(codesign -d --entitlements - --xml stage/Payload/Ironlog.app 2>/dev/null | tr -d '\n\t' | head -c 600)"
           fi
 
@@ -104,7 +67,7 @@ jobs:
           TAG="build-${GITHUB_RUN_NUMBER}"
           gh release create "$TAG" out/*.ipa \
             --title "Ironlog build ${GITHUB_RUN_NUMBER}" \
-            --notes "Commit ${GITHUB_SHA::7}. Install Ironlog.ipa with SideStore; use Ironlog-phone-only.ipa if the Watch app causes trouble." \
+            --notes "Commit ${GITHUB_SHA::7}. Install Ironlog.ipa with SideStore." \
             --latest
 
       - name: Upload IPAs
