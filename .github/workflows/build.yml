@@ -20,6 +20,13 @@ jobs:
           xcodebuild -version
           xcodebuild -showsdks | grep -Ei "ios|watch" || true
 
+      - name: Read version
+        id: ver
+        run: |
+          V=$(grep -m1 'MARKETING_VERSION' project.yml | sed -E 's/.*"([^"]+)".*/\1/')
+          echo "version=$V" >> "$GITHUB_OUTPUT"
+          echo "::notice title=Version::$V (build $GITHUB_RUN_NUMBER)"
+
       - name: Install XcodeGen
         run: brew install xcodegen
 
@@ -32,6 +39,7 @@ jobs:
           xcodebuild -project Ironlog.xcodeproj -target Ironlog \
             -configuration Release -sdk iphoneos \
             SYMROOT="$PWD/build" \
+            MARKETING_VERSION="${{ steps.ver.outputs.version }}" CURRENT_PROJECT_VERSION="$GITHUB_RUN_NUMBER" \
             CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" \
             build 2>&1 | tee ios.log | grep -E "error:|warning: .*\.swift|BUILD (SUCCEEDED|FAILED)" || true
           test -d build/Release-iphoneos/Ironlog.app
@@ -63,11 +71,15 @@ jobs:
       - name: Publish release
         env:
           GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.ver.outputs.version }}
         run: |
-          TAG="build-${GITHUB_RUN_NUMBER}"
-          gh release create "$TAG" out/*.ipa \
-            --title "Ironlog build ${GITHUB_RUN_NUMBER}" \
-            --notes "Commit ${GITHUB_SHA::7}. Install Ironlog.ipa with SideStore." \
+          TAG="v$VERSION"
+          if gh release view "$TAG" >/dev/null 2>&1; then TAG="v$VERSION-build.$GITHUB_RUN_NUMBER"; fi
+          NOTES=$(awk -v v="$VERSION" 'index($0, "## " v) == 1 {f=1; next} /^## / && f {exit} f' CHANGELOG.md)
+          printf '%s\n\nBuild %s, commit %s. Install Ironlog.ipa with SideStore.\n' "$NOTES" "$GITHUB_RUN_NUMBER" "${GITHUB_SHA::7}" > notes.md
+          gh release create "$TAG" out/Ironlog.ipa \
+            --title "Ironlog $VERSION (build $GITHUB_RUN_NUMBER)" \
+            --notes-file notes.md \
             --latest
 
       - name: Upload IPAs
