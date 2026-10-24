@@ -222,44 +222,67 @@ struct FinishSheet: View {
     let entry: HistoryEntry
 
     var body: some View {
-        VStack(spacing: 20) {
-            Text("Workout saved")
-                .font(.title2.weight(.bold))
-                .padding(.top, 24)
-            HStack(spacing: 28) {
-                stat("\(entry.setCount)", "sets")
-                stat(entry.volume.formatted(.number.precision(.fractionLength(0))), "lb moved")
-                stat("\(entry.minutes)", "min")
-            }
-            if store.data.healthViaShortcut, let url = store.healthShortcutURL(minutes: entry.minutes) {
-                Button {
-                    openURL(url)
-                } label: {
-                    Label("Save to Apple Health", systemImage: "heart.fill")
-                        .frame(maxWidth: .infinity)
+        let records = store.records(for: entry)
+        ScrollView {
+            VStack(spacing: 20) {
+                Text("Workout saved")
+                    .font(.system(size: 24, weight: .heavy))
+                    .foregroundStyle(Theme.ink)
+                    .padding(.top, 28)
+                HStack(spacing: 28) {
+                    stat("\(entry.setCount)", "sets")
+                    stat(entry.volume.formatted(.number.precision(.fractionLength(0))), "lb moved")
+                    stat("\(entry.minutes)", "min")
                 }
-                .buttonStyle(.glass)
-                .padding(.horizontal, 24)
+                if !records.isEmpty {
+                    VStack(alignment: .leading, spacing: 10) {
+                        Label(records.count == 1 ? "New record" : "\(records.count) new records", systemImage: "trophy.fill")
+                            .font(.system(size: 15, weight: .bold))
+                            .foregroundStyle(Theme.accentText)
+                        ForEach(records) { r in
+                            VStack(alignment: .leading, spacing: 1) {
+                                Text(r.name)
+                                    .font(.system(size: 15, weight: .semibold))
+                                    .foregroundStyle(Theme.ink)
+                                Text(r.text)
+                                    .font(.system(size: 13))
+                                    .foregroundStyle(Theme.sub)
+                            }
+                        }
+                    }
+                    .padding(16)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(Theme.promptBg, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+                    .overlay(RoundedRectangle(cornerRadius: 20, style: .continuous).stroke(Theme.promptBorder, lineWidth: 1))
+                    .padding(.horizontal, 24)
+                }
+                if store.data.healthViaShortcut, let url = store.healthShortcutURL(minutes: entry.minutes) {
+                    Button {
+                        openURL(url)
+                    } label: {
+                        Label("Save to Apple Health", systemImage: "heart.fill")
+                    }
+                    .buttonStyle(OutlineButtonStyle())
+                    .padding(.horizontal, 24)
+                }
+                Button("Done") { dismiss() }
+                    .buttonStyle(PrimaryButtonStyle())
+                    .padding(.horizontal, 24)
             }
-            Button {
-                dismiss()
-            } label: {
-                Text("Done").frame(maxWidth: .infinity)
-            }
-            .buttonStyle(.glassProminent)
-            .padding(.horizontal, 24)
-            Spacer()
+            .padding(.bottom, 24)
         }
+        .background { SkyBackground() }
     }
 
     private func stat(_ value: String, _ label: String) -> some View {
         VStack(spacing: 2) {
             Text(value)
-                .font(.title.weight(.semibold))
+                .font(.system(size: 28, weight: .heavy))
                 .monospacedDigit()
+                .foregroundStyle(Theme.ink)
             Text(label.uppercased())
-                .font(.caption2.weight(.semibold))
-                .foregroundStyle(.secondary)
+                .font(.system(size: 11, weight: .bold))
+                .foregroundStyle(Theme.sub)
         }
     }
 }

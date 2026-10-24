@@ -154,6 +154,8 @@ enum Library {
 struct Slot: Hashable {
     let label: String
     let candidates: [String]
+    /// Suggested superset with the next slot.
+    var pairNext: Bool = false
 }
 
 enum RoutineID: String, CaseIterable, Codable, Identifiable {
@@ -194,7 +196,7 @@ enum RoutineID: String, CaseIterable, Codable, Identifiable {
             Slot(label: "Vertical pull", candidates: ["lat_wide", "cable_pulldown", "db_pullover"]),
             Slot(label: "Incline press", candidates: ["db_incline", "smith_incline", "cable_low_high"]),
             Slot(label: "Row", candidates: ["cable_row", "cs_db_row", "one_arm_row", "smith_row"]),
-            Slot(label: "Biceps", candidates: ["db_curl", "cable_curl", "incline_curl"]),
+            Slot(label: "Biceps", candidates: ["db_curl", "cable_curl", "incline_curl"], pairNext: true),
             Slot(label: "Triceps", candidates: ["pushdown", "db_skull", "smith_cgp", "bench_dip"]),
         ]
         case .upperB: return [
@@ -202,7 +204,7 @@ enum RoutineID: String, CaseIterable, Codable, Identifiable {
             Slot(label: "Incline chest", candidates: ["smith_incline", "db_incline", "cable_low_high", "db_fly"]),
             Slot(label: "Row", candidates: ["cs_db_row", "cable_row", "one_arm_row", "smith_row"]),
             Slot(label: "Side delts", candidates: ["cable_lat_raise", "db_lat_raise", "face_pull"]),
-            Slot(label: "Biceps", candidates: ["hammer", "cable_curl", "incline_curl", "db_curl"]),
+            Slot(label: "Biceps", candidates: ["hammer", "cable_curl", "incline_curl", "db_curl"], pairNext: true),
             Slot(label: "Triceps", candidates: ["db_skull", "pushdown", "bench_dip", "smith_cgp"]),
         ]
         case .lowerA: return [
@@ -210,7 +212,7 @@ enum RoutineID: String, CaseIterable, Codable, Identifiable {
             Slot(label: "Hinge", candidates: ["db_rdl", "smith_rdl", "pullthrough"]),
             Slot(label: "Single leg", candidates: ["db_bss", "db_lunge", "step_up", "smith_split"]),
             Slot(label: "Quads", candidates: ["leg_ext", "goblet", "db_lunge"]),
-            Slot(label: "Calves", candidates: ["legmachine_calf", "smith_calf", "lp_calf", "db_calf", "bw_calf"]),
+            Slot(label: "Calves", candidates: ["legmachine_calf", "smith_calf", "lp_calf", "db_calf", "bw_calf"], pairNext: true),
             Slot(label: "Abs", candidates: ["ab_crunch", "cable_crunch", "plank"]),
         ]
         case .lowerB: return [
@@ -218,7 +220,7 @@ enum RoutineID: String, CaseIterable, Codable, Identifiable {
             Slot(label: "Squat pattern", candidates: ["legpress_high", "smith_squat", "goblet"]),
             Slot(label: "Hamstrings", candidates: ["leg_curl", "db_sl_rdl", "pullthrough"]),
             Slot(label: "Glutes", candidates: ["smith_thrust", "db_thrust", "kickback"]),
-            Slot(label: "Calves", candidates: ["lp_calf", "legmachine_calf", "smith_calf", "db_calf", "bw_calf"]),
+            Slot(label: "Calves", candidates: ["lp_calf", "legmachine_calf", "smith_calf", "db_calf", "bw_calf"], pairNext: true),
             Slot(label: "Abs", candidates: ["cable_crunch", "ab_crunch", "plank"]),
         ]
         }

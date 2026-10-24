@@ -47,7 +47,7 @@ struct RootView: View {
         .tint(Theme.accent)
         .sheet(item: $store.lastFinished) { entry in
             FinishSheet(entry: entry)
-                .presentationDetents([.medium])
+                .presentationDetents([.medium, .large])
         }
     }
 }

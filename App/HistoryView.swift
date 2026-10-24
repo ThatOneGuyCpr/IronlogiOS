@@ -18,7 +18,7 @@ struct HistoryView: View {
                             NavigationLink {
                                 HistoryDetail(entry: entry)
                             } label: {
-                                HistoryRow(entry: entry)
+                                HistoryRow(entry: entry, records: store.records(for: entry).count)
                             }
                             .listRowBackground(Color.clear)
                         }
@@ -38,11 +38,20 @@ struct HistoryView: View {
 
 private struct HistoryRow: View {
     let entry: HistoryEntry
+    let records: Int
 
     var body: some View {
         HStack {
             VStack(alignment: .leading, spacing: 3) {
-                Text(entry.routine.title).font(.headline)
+                HStack(spacing: 6) {
+                    Text(entry.routine.title).font(.headline)
+                    if records > 0 {
+                        Label("\(records)", systemImage: "trophy.fill")
+                            .font(.system(size: 12, weight: .bold))
+                            .foregroundStyle(Theme.accentText)
+                            .accessibilityLabel("\(records) records")
+                    }
+                }
                 Text(entry.date.formatted(.dateTime.weekday(.abbreviated).month(.abbreviated).day()) + " · \(entry.minutes) min")
                     .font(.caption)
                     .foregroundStyle(.secondary)
@@ -60,10 +69,28 @@ private struct HistoryRow: View {
 }
 
 struct HistoryDetail: View {
+    @EnvironmentObject private var store: Store
     let entry: HistoryEntry
 
     var body: some View {
+        let records = store.records(for: entry)
         List {
+            if !records.isEmpty {
+                Section {
+                    ForEach(records) { r in
+                        Label {
+                            VStack(alignment: .leading, spacing: 1) {
+                                Text(r.name)
+                                Text(r.text).font(.caption).foregroundStyle(.secondary)
+                            }
+                        } icon: {
+                            Image(systemName: "trophy.fill").foregroundStyle(Theme.accent)
+                        }
+                    }
+                } header: {
+                    Text("Records")
+                }
+            }
             ForEach(Array(entry.items.enumerated()), id: \.offset) { _, item in
                 Section(item.name) {
                     ForEach(Array(item.sets.enumerated()), id: \.offset) { k, s in

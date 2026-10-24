@@ -1,6 +1,12 @@
 import SwiftUI
 import UIKit
 
+/// Which set field has the keyboard.
+enum SetField: Hashable {
+    case weight(UUID)
+    case reps(UUID)
+}
+
 struct WorkoutView: View {
     @EnvironmentObject private var store: Store
     @EnvironmentObject private var rest: RestController
@@ -10,18 +16,20 @@ struct WorkoutView: View {
     @State private var expanded: Set<UUID> = []
     @State private var confirmDiscard = false
     @State private var confirmEmptyFinish = false
+    @FocusState private var focus: SetField?
 
     var body: some View {
         NavigationStack {
             ScrollView {
                 if let s = store.data.session {
                     let current = s.items.firstIndex { $0.exerciseID != nil && !$0.skipped && !$0.allDone }
+                    let currentPartner = current.flatMap { store.partner(of: $0) }
                     let total = s.items.count
                     VStack(alignment: .leading, spacing: 12) {
                         progressBar(s)
                         ForEach(Array(s.items.enumerated()), id: \.element.id) { i, item in
                             let label = s.routine.slots[safe: item.slot]?.label ?? ""
-                            if i == current || expanded.contains(item.id) {
+                            if i == current || i == currentPartner || expanded.contains(item.id) {
                                 FocusCard(
                                     index: i,
                                     total: total,
@@ -30,7 +38,8 @@ struct WorkoutView: View {
                                     onSwap: { swapIndex = IndexBox(id: i) },
                                     onEdit: { id in editing = IDBox(id: id) },
                                     onSetDone: { startRest(after: i) },
-                                    onCollapse: i == current ? nil : { _ = withAnimation(.snappy) { expanded.remove(item.id) } }
+                                    onCollapse: (i == current || i == currentPartner) ? nil : { _ = withAnimation(.snappy) { expanded.remove(item.id) } },
+                                    focus: $focus
                                 )
                             } else {
                                 CompactRow(
@@ -94,8 +103,20 @@ struct WorkoutView: View {
                         .tint(Theme.accent)
                 }
                 ToolbarItemGroup(placement: .keyboard) {
+                    if let id = weightFocus {
+                        let inc = store.increment(forSet: id)
+                        Button("−\(Store.fmt(inc))") { store.adjustWeight(setID: id, by: -inc) }
+                        Button("+\(Store.fmt(inc))") { store.adjustWeight(setID: id, by: inc) }
+                        Button("Same as last") { store.copyPrevious(setID: id) }
+                    }
+                    if let id = repsFocus {
+                        Button("−1") { store.adjustReps(setID: id, by: -1) }
+                        Button("+1") { store.adjustReps(setID: id, by: 1) }
+                        Button("Same as last") { store.copyPrevious(setID: id) }
+                    }
                     Spacer()
-                    Button("Done") { hideKeyboard() }
+                    Button("Done") { focus = nil; hideKeyboard() }
+                        .fontWeight(.semibold)
                 }
             }
             .safeAreaInset(edge: .bottom) {
@@ -134,6 +155,16 @@ struct WorkoutView: View {
         }
     }
 
+    private var weightFocus: UUID? {
+        if case .weight(let id) = focus { return id }
+        return nil
+    }
+
+    private var repsFocus: UUID? {
+        if case .reps(let id) = focus { return id }
+        return nil
+    }
+
     private var takenSuffix: String {
         let taken = Equipment.allCases.filter { !store.data.open.contains($0) }
         if taken.isEmpty { return "" }
@@ -164,9 +195,22 @@ struct WorkoutView: View {
     }
 
     private func startRest(after i: Int) {
-        guard let id = store.data.session?.items[safe: i]?.exerciseID else { return }
+        guard let s = store.data.session, let id = s.items[safe: i]?.exerciseID else { return }
+        var seconds = store.prescription(id).rest
+        if let p = store.partner(of: i), let pid = s.items[p].exerciseID, !s.items[p].skipped, !s.items[p].allDone {
+            let partnerName = Library.byID[pid]?.name ?? "the other exercise"
+            if p > i {
+                // First half of a superset: go straight to the second exercise.
+                rest.skip()
+                rest.updateProgress(next: partnerName, detail: "Superset, no rest")
+                return
+            }
+            seconds = max(seconds, store.prescription(pid).rest)
+            rest.start(seconds: seconds, next: partnerName, detail: "Superset, next round")
+            return
+        }
         let info = store.progressInfo(after: i)
-        rest.start(seconds: store.prescription(id).rest, next: info.next, detail: info.detail)
+        rest.start(seconds: seconds, next: info.next, detail: info.detail)
     }
 
     private func finish() {
@@ -260,13 +304,16 @@ struct FocusCard: View {
     var onEdit: (String) -> Void
     var onSetDone: () -> Void
     var onCollapse: (() -> Void)?
+    var focus: FocusState<SetField?>.Binding
+    @State private var editingNote = false
 
     var body: some View {
         let ex = item.exerciseID.flatMap { Library.byID[$0] }
+        let paired = store.partner(of: index) != nil
         VStack(alignment: .leading, spacing: 14) {
             HStack(alignment: .top, spacing: 10) {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("\(slotLabel.uppercased()) · \(index + 1) OF \(total)")
+                    Text("\(paired ? "SUPERSET · " : "")\(slotLabel.uppercased()) · \(index + 1) OF \(total)")
                         .font(.system(size: 11, weight: .bold))
                         .tracking(1)
                         .foregroundStyle(Theme.accentText)
@@ -290,6 +337,12 @@ struct FocusCard: View {
                     Menu {
                         Button("Sets, reps and rest", systemImage: "slider.horizontal.3") { onEdit(ex.id) }
                         Button("Swap exercise", systemImage: "arrow.left.arrow.right") { onSwap() }
+                        Button(paired ? "Undo superset" : "Superset with next", systemImage: "link") {
+                            withAnimation(.snappy) { store.toggleSuperset(index) }
+                        }
+                        Button((store.data.notes[ex.id] ?? "").isEmpty ? "Add a note" : "Edit note", systemImage: "note.text") {
+                            editingNote = true
+                        }
                         Button(item.skipped ? "Undo skip" : "Skip today", systemImage: "forward") {
                             store.setSkipped(index, !item.skipped)
                         }
@@ -309,6 +362,24 @@ struct FocusCard: View {
             }
 
             if let ex {
+                let note = store.data.notes[ex.id] ?? ""
+                if editingNote || !note.isEmpty {
+                    HStack(alignment: .top, spacing: 8) {
+                        Image(systemName: "note.text")
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundStyle(Theme.accentText)
+                            .padding(.top, 2)
+                        TextField("Seat height, pin, grip…", text: store.noteBinding(ex.id), axis: .vertical)
+                            .font(.system(size: 14, weight: .medium))
+                            .foregroundStyle(Theme.ink)
+                            .lineLimit(1...4)
+                            .onSubmit { editingNote = false }
+                    }
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 10)
+                    .background(Theme.chip, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                }
+
                 ClipBox(exercise: ex)
 
                 let p = store.prescription(ex.id)
@@ -329,7 +400,7 @@ struct FocusCard: View {
                     }
                 }
 
-                SetTable(index: index, item: item, exercise: ex, onSetDone: onSetDone)
+                SetTable(index: index, item: item, exercise: ex, onSetDone: onSetDone, focus: focus)
 
                 if !store.isAvailable(ex.id) && !item.allDone {
                     Text("\(store.missingReason(ex.id)). Swap to finish the remaining sets on something else.")
@@ -359,6 +430,7 @@ private struct SetTable: View {
     let item: ItemLog
     let exercise: Exercise
     var onSetDone: () -> Void
+    var focus: FocusState<SetField?>.Binding
 
     var body: some View {
         let active = item.sets.firstIndex { !$0.done }
@@ -377,7 +449,7 @@ private struct SetTable: View {
             ForEach(Array(item.sets.enumerated()), id: \.element.id) { j, set in
                 SetRow(i: index, j: j, set: set, exercise: exercise,
                        last: store.lastSet(exercise.id, j),
-                       isActive: j == active, onDone: onSetDone)
+                       isActive: j == active, onDone: onSetDone, focus: focus)
             }
         }
     }
@@ -392,6 +464,7 @@ struct SetRow: View {
     let last: String
     let isActive: Bool
     var onDone: () -> Void
+    var focus: FocusState<SetField?>.Binding
 
     var body: some View {
         HStack(spacing: 8) {
@@ -411,11 +484,14 @@ struct SetRow: View {
                 field(placeholder: exercise.bodyweight ? "BW" : "lb",
                       text: store.binding(i, j, \.weight), keyboard: .decimalPad,
                       label: "Weight, set \(j + 1)")
+                    .focused(focus, equals: .weight(set.id))
             }
             field(placeholder: set.hint.isEmpty ? (exercise.timed ? "sec" : "reps") : set.hint,
                   text: store.binding(i, j, \.reps), keyboard: .numberPad,
                   label: "\(exercise.timed ? "Seconds" : "Reps"), set \(j + 1)")
+                .focused(focus, equals: .reps(set.id))
             Button {
+                focus.wrappedValue = nil
                 hideKeyboard()
                 if store.toggleSet(i, j) {
                     UIImpactFeedbackGenerator(style: .medium).impactOccurred()

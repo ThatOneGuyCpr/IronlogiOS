@@ -15,8 +15,62 @@ enum ClipSource {
 }
 
 enum Clips {
-    /// Exercise ID → YouTube video ID. Filled in as videos are picked and checked.
-    static let youtube: [String: String] = [:]
+    /// Exercise ID → YouTube video ID for the in-app player.
+    static let youtube: [String: String] = [
+        "db_bench": "5Y3VZsLb1Ys",
+        "smith_bench": "7FyJdsXeta8",
+        "cable_press": "UsFdYBcvHEs",
+        "incline_pushup": "Oy1AzohemMc",
+        "db_incline": "OC7Qs_SAO2E",
+        "smith_incline": "PbROfDSbK4s",
+        "cable_low_high": "uPiDTAvW0Yo",
+        "db_fly": "QENKPHhQVi4",
+        "lat_wide": "7JnP8dFbS14",
+        "lat_close": "IjoFCmLX7z0",
+        "cable_pulldown": "SALxEARiMkw",
+        "straight_arm": "mvgQs3CkgGQ",
+        "db_pullover": "fZGhnNhfRBs",
+        "cable_row": "f_r95UajQcg",
+        "cs_db_row": "llFTFDwmGcw",
+        "one_arm_row": "Qx2f4YwJAu4",
+        "smith_row": "ZFNLCpj8e-o",
+        "db_curl": "6DeLZ6cbgWQ",
+        "hammer": "8_BFFLUDu5Q",
+        "cable_curl": "_hRnRorKRWs",
+        "incline_curl": "PAnypqTfEuU",
+        "pushdown": "ChbWX35gD44",
+        "db_skull": "uXOm7MpK4HQ",
+        "smith_cgp": "z8UWdGwtzRM",
+        "bench_dip": "e5Gyc1D_BxM",
+        "cable_lat_raise": "nMCQuV6HE3A",
+        "db_lat_raise": "Y29xKcze8Ik",
+        "face_pull": "0Po47vvj9g4",
+        "legpress": "tg-jOYwhI5w",
+        "legpress_high": "OIq-tsCx_9k",
+        "smith_squat": "iAcRGCsG_PY",
+        "goblet": "JO7D6GJ98wY",
+        "db_rdl": "hQgFixeXdZo",
+        "smith_rdl": "pwGLw2xJCGw",
+        "pullthrough": "4oZ_0_bQcOg",
+        "db_bss": "VPhhE6bBzZE",
+        "db_lunge": "I34ysEkPK7w",
+        "step_up": "MZitRhrqZRE",
+        "smith_split": "NkAlwfIbsa0",
+        "leg_ext": "xAUvXdHu1sI",
+        "leg_curl": "Z5pRnXaCjpM",
+        "db_sl_rdl": "gPE_sXiQHrs",
+        "smith_thrust": "ADgWjz9i42Y",
+        "db_thrust": "ETnhBWeWK74",
+        "kickback": "VSgMyiOu0uE",
+        "legmachine_calf": "B9_myFjUb5E",
+        "smith_calf": "FNdI5TynYxs",
+        "lp_calf": "OMUvfMZOcSA",
+        "db_calf": "1D7s-VyLq0Y",
+        "bw_calf": "4HQ8Am9IuME",
+        "ab_crunch": "0kLWho-pEdQ",
+        "cable_crunch": "0KEP6A1deBE",
+        "plank": "6LqqeBtFn9M",
+    ]
 
     static func source(for id: String) -> ClipSource {
         for ext in ["mp4", "mov", "m4v"] {
@@ -125,6 +179,7 @@ struct ClipPlayerSheet: View {
     let exercise: Exercise
     let source: ClipSource
     @Environment(\.dismiss) private var dismiss
+    @State private var embedFailed = false
 
     var body: some View {
         NavigationStack {
@@ -134,10 +189,15 @@ struct ClipPlayerSheet: View {
                     VideoPlayer(player: AVPlayer(url: url))
                         .ignoresSafeArea(edges: .bottom)
                 case .youtube(let id):
-                    YouTubePlayer(videoID: id)
-                        .aspectRatio(16 / 9, contentMode: .fit)
-                        .frame(maxHeight: .infinity)
-                        .background(Color.black)
+                    if embedFailed, let url = exercise.videoURL {
+                        SafariView(url: url)
+                            .ignoresSafeArea(edges: .bottom)
+                    } else {
+                        YouTubePlayer(videoID: id, onError: { embedFailed = true })
+                            .aspectRatio(16 / 9, contentMode: .fit)
+                            .frame(maxHeight: .infinity)
+                            .background(Color.black)
+                    }
                 case .none:
                     if let url = exercise.videoURL {
                         SafariView(url: url)
@@ -188,28 +248,54 @@ struct LoopingVideo: UIViewRepresentable {
 
 struct YouTubePlayer: UIViewRepresentable {
     let videoID: String
+    /// Called when YouTube refuses to play the video here (embedding turned off, removed, etc.).
+    var onError: () -> Void
+
+    func makeCoordinator() -> Coordinator { Coordinator(onError: onError) }
 
     func makeUIView(context: Context) -> WKWebView {
         let config = WKWebViewConfiguration()
         config.allowsInlineMediaPlayback = true
         config.mediaTypesRequiringUserActionForPlayback = []
+        config.userContentController.add(context.coordinator, name: "yt")
         let web = WKWebView(frame: .zero, configuration: config)
         web.isOpaque = false
         web.backgroundColor = .black
         web.scrollView.isScrollEnabled = false
         let html = """
-        <html><head><meta name="viewport" content="width=device-width,initial-scale=1"></head>
-        <body style="margin:0;background:#000">
-        <iframe style="position:absolute;inset:0;width:100%;height:100%;border:0"
-          src="https://www.youtube-nocookie.com/embed/\(videoID)?playsinline=1&autoplay=1&rel=0&modestbranding=1"
-          allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen></iframe>
-        </body></html>
+        <html><head><meta name="viewport" content="width=device-width,initial-scale=1">
+        <style>html,body{margin:0;height:100%;background:#000}#p{position:absolute;inset:0;width:100%;height:100%}</style></head>
+        <body><div id="p"></div>
+        <script src="https://www.youtube.com/iframe_api"></script>
+        <script>
+        function onYouTubeIframeAPIReady() {
+          new YT.Player('p', {
+            width: '100%', height: '100%', videoId: '\(videoID)',
+            host: 'https://www.youtube-nocookie.com',
+            playerVars: { playsinline: 1, autoplay: 1, rel: 0, modestbranding: 1 },
+            events: { onError: function(e) { window.webkit.messageHandlers.yt.postMessage(String(e.data)); } }
+          });
+        }
+        </script></body></html>
         """
         web.loadHTMLString(html, baseURL: URL(string: "https://thatoneguycpr.github.io/"))
         return web
     }
 
     func updateUIView(_ uiView: WKWebView, context: Context) {}
+
+    static func dismantleUIView(_ uiView: WKWebView, coordinator: Coordinator) {
+        uiView.configuration.userContentController.removeScriptMessageHandler(forName: "yt")
+    }
+
+    final class Coordinator: NSObject, WKScriptMessageHandler {
+        let onError: () -> Void
+        init(onError: @escaping () -> Void) { self.onError = onError }
+
+        func userContentController(_ controller: WKUserContentController, didReceive message: WKScriptMessage) {
+            DispatchQueue.main.async { self.onError() }
+        }
+    }
 }
 
 struct SafariView: UIViewControllerRepresentable {

@@ -19,6 +19,7 @@ struct SettingsView: View {
                         }
                     }
                     Stepper("Workouts per week: \(store.data.weeklyTarget)", value: $store.data.weeklyTarget, in: 1...7)
+                    Toggle("Pair supersets by default", isOn: $store.data.supersetsByDefault)
                 }
 
                 Section("What's open by default") {
@@ -65,11 +66,24 @@ struct SettingsView: View {
                     Text("SideStore can't grant direct Health access, so Ironlog hands each workout to a shortcut that logs it.")
                 }
 
-                Section("Backup") {
+                Section {
                     Button("Import a backup") { importing = true }
                     if let exportURL {
                         ShareLink("Export a backup", item: exportURL)
                     }
+                    DisclosureGroup("Set up automatic daily backups") {
+                        Text("""
+                        1. Open Shortcuts, go to Automation, tap +, and pick Time of Day. Choose a time (3:00 AM works), Daily, and Run Immediately.
+                        2. Add the action "Export Ironlog Backup".
+                        3. Add "Save File". Turn off Ask Where to Save, set the folder (for example iCloud Drive › Shortcuts › Ironlog), and turn on Overwrite If File Exists.
+                        That's it. Your latest backup stays in iCloud Drive. To restore, tap Import a backup and pick that file.
+                        """)
+                        .font(.callout)
+                    }
+                } header: {
+                    Text("Backup")
+                } footer: {
+                    Text("Workouts live only on this phone. The daily automation keeps a copy in iCloud Drive without you doing anything.")
                 }
 
                 Section {

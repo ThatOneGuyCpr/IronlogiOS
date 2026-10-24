@@ -20,10 +20,29 @@ struct ItemLog: Codable, Hashable, Identifiable {
     var skipped = false
     var manual = false
     var sets: [SetLog] = []
+    /// Paired with the next item as a superset.
+    var superset = false
+
+    enum CodingKeys: String, CodingKey {
+        case id, slot, exerciseID, skipped, manual, sets, superset
+    }
 
     var hasDone: Bool { sets.contains { $0.done } }
     var allDone: Bool { !sets.isEmpty && sets.allSatisfy { $0.done } }
     var doneCount: Int { sets.filter { $0.done }.count }
+}
+
+extension ItemLog {
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id = try c.decodeIfPresent(UUID.self, forKey: .id) ?? UUID()
+        slot = try c.decodeIfPresent(Int.self, forKey: .slot) ?? 0
+        exerciseID = try c.decodeIfPresent(String.self, forKey: .exerciseID)
+        skipped = try c.decodeIfPresent(Bool.self, forKey: .skipped) ?? false
+        manual = try c.decodeIfPresent(Bool.self, forKey: .manual) ?? false
+        sets = try c.decodeIfPresent([SetLog].self, forKey: .sets) ?? []
+        superset = try c.decodeIfPresent(Bool.self, forKey: .superset) ?? false
+    }
 }
 
 struct Session: Codable, Hashable {
@@ -78,6 +97,9 @@ struct AppData: Codable {
     var snoozed: [String: Int] = [:]
     var appearance: String = "system"
     var weeklyTarget: Int = 4
+    /// Per-exercise notes (seat height, pin, grip).
+    var notes: [String: String] = [:]
+    var supersetsByDefault = true
 
     init() {}
 
@@ -88,7 +110,7 @@ struct AppData: Codable {
         open = try c.decodeIfPresent(Set<Equipment>.self, forKey: .open) ?? d.open
         hidden = try c.decodeIfPresent(Set<String>.self, forKey: .hidden) ?? d.hidden
         history = try c.decodeIfPresent([HistoryEntry].self, forKey: .history) ?? d.history
-        session = try c.decodeIfPresent(Session.self, forKey: .session)
+        session = try? c.decodeIfPresent(Session.self, forKey: .session)
         overrides = try c.decodeIfPresent([String: Prescription].self, forKey: .overrides) ?? d.overrides
         selectedRoutine = try c.decodeIfPresent(RoutineID.self, forKey: .selectedRoutine)
         healthViaShortcut = try c.decodeIfPresent(Bool.self, forKey: .healthViaShortcut) ?? d.healthViaShortcut
@@ -97,6 +119,8 @@ struct AppData: Codable {
         snoozed = try c.decodeIfPresent([String: Int].self, forKey: .snoozed) ?? d.snoozed
         appearance = try c.decodeIfPresent(String.self, forKey: .appearance) ?? d.appearance
         weeklyTarget = try c.decodeIfPresent(Int.self, forKey: .weeklyTarget) ?? d.weeklyTarget
+        notes = try c.decodeIfPresent([String: String].self, forKey: .notes) ?? d.notes
+        supersetsByDefault = try c.decodeIfPresent(Bool.self, forKey: .supersetsByDefault) ?? d.supersetsByDefault
     }
 }
 
@@ -149,7 +173,23 @@ final class Store: ObservableObject {
         guard let raw = try? Data(contentsOf: fileURL) else { return AppData() }
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .iso8601
-        return (try? decoder.decode(AppData.self, from: raw)) ?? AppData()
+        if let data = try? decoder.decode(AppData.self, from: raw) { return data }
+        // Never overwrite data we couldn't read: set it aside so it can be recovered.
+        let stamp = Int(Date().timeIntervalSince1970)
+        let aside = fileURL.deletingLastPathComponent().appendingPathComponent("ironlog-unreadable-\(stamp).json")
+        try? FileManager.default.copyItem(at: fileURL, to: aside)
+        return AppData()
+    }
+
+    /// Backup JSON built straight from disk, for the Shortcuts action.
+    static func backupData() -> Data? {
+        let data = load()
+        let file = ExportFile(history: data.history, hidden: data.hidden, open: data.open,
+                              overrides: data.overrides, notes: data.notes)
+        let encoder = JSONEncoder()
+        encoder.dateEncodingStrategy = .iso8601
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        return try? encoder.encode(file)
     }
 
     private static func write(_ data: AppData) {
@@ -286,8 +326,10 @@ final class Store: ObservableObject {
 
     func startWorkout() {
         let routine = todayRoutine
+        let slots = routine.slots
         let items = plan(routine).enumerated().map { i, ex in
-            ItemLog(slot: i, exerciseID: ex?.id, sets: ex.map { buildSets($0.id) } ?? [])
+            ItemLog(slot: i, exerciseID: ex?.id, sets: ex.map { buildSets($0.id) } ?? [],
+                    superset: data.supersetsByDefault && slots[i].pairNext && i + 1 < slots.count)
         }
         data.session = Session(routine: routine, start: Date(), items: items)
     }
@@ -610,6 +652,119 @@ final class Store: ObservableObject {
         return out
     }
 
+    // MARK: Supersets
+
+    /// The other half of item i's superset, if it has one.
+    func partner(of i: Int) -> Int? {
+        guard let s = data.session, s.items.indices.contains(i) else { return nil }
+        if s.items[i].superset, s.items.indices.contains(i + 1) { return i + 1 }
+        if i > 0, s.items[i - 1].superset { return i - 1 }
+        return nil
+    }
+
+    func toggleSuperset(_ i: Int) {
+        guard var s = data.session, s.items.indices.contains(i) else { return }
+        if i > 0, s.items[i - 1].superset {
+            s.items[i - 1].superset = false
+        } else if s.items.indices.contains(i + 1) {
+            s.items[i].superset.toggle()
+            if s.items[i].superset, s.items.indices.contains(i + 2) { s.items[i + 1].superset = false }
+        }
+        data.session = s
+    }
+
+    // MARK: Quick edits from the keyboard bar
+
+    private func locate(_ setID: UUID) -> (Int, Int)? {
+        guard let s = data.session else { return nil }
+        for (i, item) in s.items.enumerated() {
+            if let j = item.sets.firstIndex(where: { $0.id == setID }) { return (i, j) }
+        }
+        return nil
+    }
+
+    func increment(forSet setID: UUID) -> Double {
+        guard let loc = locate(setID), let id = data.session?.items[loc.0].exerciseID,
+              let ex = Library.byID[id] else { return 5 }
+        return ex.increment
+    }
+
+    func adjustWeight(setID: UUID, by delta: Double) {
+        guard let loc = locate(setID) else { return }
+        mutateItem(loc.0) { item in
+            let current = Double(item.sets[loc.1].weight) ?? 0
+            item.sets[loc.1].weight = Store.fmt(max(0, current + delta))
+        }
+    }
+
+    func adjustReps(setID: UUID, by delta: Int) {
+        guard let loc = locate(setID) else { return }
+        mutateItem(loc.0) { item in
+            let base = Int(item.sets[loc.1].reps) ?? Int(item.sets[loc.1].hint) ?? 0
+            item.sets[loc.1].reps = String(max(0, base + delta))
+        }
+    }
+
+    /// Copies the previous set's weight and reps (or last session's, for set 1).
+    func copyPrevious(setID: UUID) {
+        guard let loc = locate(setID) else { return }
+        let (i, j) = loc
+        mutateItem(i) { item in
+            if j > 0 {
+                item.sets[j].weight = item.sets[j - 1].weight
+                item.sets[j].reps = item.sets[j - 1].reps
+            } else if let id = item.exerciseID, let last = lastPerformance(id)?.sets.first {
+                item.sets[j].weight = last.weight > 0 ? Store.fmt(last.weight) : ""
+                item.sets[j].reps = String(last.reps)
+            }
+        }
+    }
+
+    // MARK: Notes
+
+    func noteBinding(_ id: String) -> Binding<String> {
+        Binding(
+            get: { self.data.notes[id] ?? "" },
+            set: { value in
+                self.data.notes[id] = value.isEmpty ? nil : value
+            }
+        )
+    }
+
+    // MARK: Personal records
+
+    struct Record: Identifiable, Hashable {
+        let id: String
+        let exerciseID: String
+        let name: String
+        let text: String
+    }
+
+    /// Records set in `entry`, compared with everything logged before it.
+    func records(for entry: HistoryEntry) -> [Record] {
+        let older = data.history.filter { $0.date < entry.date && $0.id != entry.id }
+        var out: [Record] = []
+        for item in entry.items {
+            guard let ex = Library.byID[item.exerciseID], !ex.timed else { continue }
+            let previous = older.flatMap { e in e.items.filter { $0.exerciseID == item.exerciseID }.flatMap { $0.sets } }
+            if previous.isEmpty { continue }
+            let top = item.sets.map { $0.weight }.max() ?? 0
+            let prevTop = previous.map { $0.weight }.max() ?? 0
+            if top > 0 && top > prevTop {
+                out.append(Record(id: item.exerciseID + "-w", exerciseID: item.exerciseID, name: ex.name,
+                                  text: "Heaviest yet: \(Store.fmt(top)) lb"))
+                continue
+            }
+            let reps = item.sets.filter { $0.weight >= top }.map { $0.reps }.max() ?? 0
+            let prevReps = previous.filter { $0.weight >= top }.map { $0.reps }.max() ?? 0
+            if reps > prevReps {
+                let text = top > 0 ? "Most reps at \(Store.fmt(top)) lb: \(reps)" : "Most reps: \(reps)"
+                out.append(Record(id: item.exerciseID + "-r", exerciseID: item.exerciseID, name: ex.name, text: text))
+            }
+        }
+        return out
+    }
+
     // MARK: Apple Health through Shortcuts
 
     func healthShortcutURL(minutes: Int) -> URL? {
@@ -635,10 +790,11 @@ final class Store: ObservableObject {
         var hidden: Set<String>
         var open: Set<Equipment>
         var overrides: [String: Prescription]
+        var notes: [String: String]? = nil
     }
 
     func exportFileURL() -> URL? {
-        let file = ExportFile(history: data.history, hidden: data.hidden, open: data.open, overrides: data.overrides)
+        let file = ExportFile(history: data.history, hidden: data.hidden, open: data.open, overrides: data.overrides, notes: data.notes)
         let encoder = JSONEncoder()
         encoder.dateEncodingStrategy = .iso8601
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
@@ -670,6 +826,7 @@ final class Store: ObservableObject {
             added = native.history.filter { !existing.contains($0.id) }
             data.hidden.formUnion(native.hidden)
             for (k, v) in native.overrides where data.overrides[k] == nil { data.overrides[k] = v }
+            for (k, v) in native.notes ?? [:] where data.notes[k] == nil { data.notes[k] = v }
         } else {
             guard let obj = try JSONSerialization.jsonObject(with: raw) as? [String: Any],
                   (obj["app"] as? String) == "ironlog",

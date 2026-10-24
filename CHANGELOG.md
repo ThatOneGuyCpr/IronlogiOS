@@ -4,6 +4,16 @@ Versions follow `MAJOR.MINOR.PATCH`. Everything before 1.0.0 is pre-launch.
 Bump MINOR for new features, PATCH for fixes, in `project.yml` (`MARKETING_VERSION`).
 The build number counts up on every CI run.
 
+## 0.4.0
+- Supersets: curls with pushdowns and calves with abs are paired by default (toggle in Settings). Finish a set of the first exercise and the app sends you straight to the second, then rests once for the pair. Pair or unpair any exercise from its ⋯ menu.
+- Faster logging: the keyboard bar has −/+ weight buttons (5 lb dumbbells, 10 lb machines), −/+1 rep, and Same as last.
+- Notes on each exercise (seat height, pin, grip), added from the ⋯ menu and shown every time.
+- Personal records: heaviest weight and most reps at a weight, shown when you finish and marked in History.
+- Form videos: a picked YouTube tutorial for every exercise, played in the app. If a video won't play there, it falls back to an in-app search.
+- Automatic backups: an "Export Ironlog Backup" action in Shortcuts for a daily automation that saves to iCloud Drive. Setup steps are in Settings.
+- New app icon with dark and tinted versions.
+- Safer saving: if saved data ever can't be read, it's set aside instead of being replaced.
+
 ## 0.3.0
 - Glacier redesign with proper light and dark modes, plus an Appearance override in Settings.
 - Train tab: Up next card with time estimate and gear status, this-week strip, routine switcher, lineup.
