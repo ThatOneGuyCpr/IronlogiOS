@@ -4,6 +4,15 @@ Versions follow `MAJOR.MINOR.PATCH`. Everything before 1.0.0 is pre-launch.
 Bump MINOR for new features, PATCH for fixes, in `project.yml` (`MARKETING_VERSION`).
 The build number counts up on every CI run.
 
+## 0.5.0
+- New widgets:
+  - This week (medium): a big count of this week's workouts, a dot for each day, and your last workout with how long ago it was.
+  - Week overview (large): progress ring, streak, last workout, latest record, and Up next with a Start button.
+  - Small: Up next with Start, Streak, Lift trend, and Move up with a one-tap "Load" that sets next session's weight.
+  - Lock screen: a week ring, an inline line above the clock, Last workout, and Up next.
+- Widget buttons open the app and start the workout or apply the new weight right away.
+- Widgets roll over at midnight and on Mondays without opening the app.
+
 ## 0.4.0
 - Supersets: curls with pushdowns and calves with abs are paired by default (toggle in Settings). Finish a set of the first exercise and the app sends you straight to the second, then rests once for the pair. Pair or unpair any exercise from its ⋯ menu.
 - Faster logging: the keyboard bar has −/+ weight buttons (5 lb dumbbells, 10 lb machines), −/+1 rep, and Same as last.

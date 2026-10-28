@@ -159,6 +159,7 @@ final class Store: ObservableObject {
 
     init() {
         data = Store.load()
+        syncWidget()
     }
 
     // MARK: Persistence
@@ -511,6 +512,31 @@ final class Store: ObservableObject {
             SharedStore.defaults.removeObject(forKey: "lastRoutine")
             SharedStore.defaults.removeObject(forKey: "lastDate")
         }
+
+        var snap = WidgetSnapshot()
+        let cutoff = Date().addingTimeInterval(-200 * 86_400)
+        snap.workouts = data.history.filter { $0.date > cutoff }.map {
+            WidgetSnapshot.Workout(date: $0.date, routine: $0.routine, minutes: $0.minutes,
+                                   sets: $0.setCount, volume: $0.volume)
+        }
+        snap.weeklyTarget = data.weeklyTarget
+        snap.next = nextRoutine
+        let picks = plan(nextRoutine).compactMap { $0 }
+        snap.nextFirst = picks.first?.name
+        snap.nextCount = picks.count
+        for entry in data.history.prefix(30) {
+            if let r = records(for: entry).first {
+                snap.record = WidgetSnapshot.Record(name: r.name, text: r.text, date: entry.date)
+                break
+            }
+        }
+        if let ex = trendExercises().first {
+            snap.trend = WidgetSnapshot.Trend(name: ex.name, weights: trend(ex.id).map { $0.weight })
+        }
+        if let p = stallPrompts().first {
+            snap.moveUp = WidgetSnapshot.MoveUp(id: p.id, name: p.name, weight: p.weight, sessions: p.sessions, next: p.next)
+        }
+        snap.save()
         WidgetCenter.shared.reloadAllTimelines()
     }
 
@@ -615,11 +641,13 @@ final class Store: ObservableObject {
 
     func acceptStall(_ p: StallPrompt) {
         data.pendingWeight[p.id] = p.next
+        syncWidget()
     }
 
     func snoozeStall(_ p: StallPrompt) {
         let count = data.history.filter { $0.items.contains { $0.exerciseID == p.id } }.count
         data.snoozed[p.id] = count + 3
+        syncWidget()
     }
 
     struct TrendPoint: Identifiable {

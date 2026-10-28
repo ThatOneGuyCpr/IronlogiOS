@@ -180,6 +180,15 @@ enum RoutineID: String, CaseIterable, Codable, Identifiable {
         }
     }
 
+    var code: String {
+        switch self {
+        case .upperA: return "UA"
+        case .upperB: return "UB"
+        case .lowerA: return "LA"
+        case .lowerB: return "LB"
+        }
+    }
+
     var subtitle: String {
         switch self {
         case .upperA: return "Chest, back, arms"

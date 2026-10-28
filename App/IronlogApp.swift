@@ -16,31 +16,38 @@ struct IronlogApp: App {
                 .environmentObject(store)
                 .environmentObject(rest)
                 .preferredColorScheme((Appearance(rawValue: store.data.appearance) ?? .system).scheme)
-                .onOpenURL { _ in
-                    // Shortcuts sends us back here after saving to Health.
-                }
         }
         .onChange(of: phase) { _, newPhase in
-            if newPhase != .active { store.saveNow() }
+            if newPhase != .active {
+                store.saveNow()
+                store.syncWidget()
+            }
         }
     }
 }
 
+enum AppTab: Hashable {
+    case train, progress, history, settings
+}
+
 struct RootView: View {
     @EnvironmentObject private var store: Store
+    @EnvironmentObject private var rest: RestController
+    @State private var tab: AppTab = .train
+    @State private var notice: String?
 
     var body: some View {
-        TabView {
-            Tab("Train", systemImage: "dumbbell.fill") {
+        TabView(selection: $tab) {
+            Tab("Train", systemImage: "dumbbell.fill", value: AppTab.train) {
                 TrainTab()
             }
-            Tab("Progress", systemImage: "chart.bar.fill") {
+            Tab("Progress", systemImage: "chart.bar.fill", value: AppTab.progress) {
                 ProgressTab()
             }
-            Tab("History", systemImage: "clock.arrow.circlepath") {
+            Tab("History", systemImage: "clock.arrow.circlepath", value: AppTab.history) {
                 HistoryView()
             }
-            Tab("Settings", systemImage: "slider.horizontal.3") {
+            Tab("Settings", systemImage: "slider.horizontal.3", value: AppTab.settings) {
                 SettingsView()
             }
         }
@@ -48,6 +55,32 @@ struct RootView: View {
         .sheet(item: $store.lastFinished) { entry in
             FinishSheet(entry: entry)
                 .presentationDetents([.medium, .large])
+        }
+        .onOpenURL { url in handle(url) }
+        .alert(notice ?? "", isPresented: Binding(get: { notice != nil }, set: { if !$0 { notice = nil } })) {
+            Button("OK") { notice = nil }
+        }
+    }
+
+    /// Links from widgets: ironlog://start and ironlog://moveup/<exercise id>.
+    /// Shortcuts also returns here with ironlog://health-saved, which needs nothing.
+    private func handle(_ url: URL) {
+        guard url.scheme == "ironlog" else { return }
+        switch url.host {
+        case "start":
+            tab = .train
+            if store.data.session == nil {
+                beginWorkout(store: store, rest: rest)
+            }
+        case "moveup":
+            tab = .progress
+            let id = url.lastPathComponent
+            if let p = store.stallPrompts().first(where: { $0.id == id }) {
+                store.acceptStall(p)
+                notice = "Your next \(p.name.lowercased()) will load \(Store.fmt(p.next)) lb."
+            }
+        default:
+            break
         }
     }
 }

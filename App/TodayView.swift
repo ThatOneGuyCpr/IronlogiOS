@@ -1,5 +1,15 @@
 import SwiftUI
 
+/// Starts today's routine and the lock screen activity. Used by the Start button and the widgets.
+@MainActor
+func beginWorkout(store: Store, rest: RestController) {
+    store.startWorkout()
+    rest.requestNotificationPermission()
+    guard let s = store.data.session else { return }
+    let first = s.items.compactMap { $0.exerciseID }.first.flatMap { Library.byID[$0]?.name } ?? "Workout"
+    rest.beginWorkout(routine: s.routine.title, startedAt: s.start, first: first)
+}
+
 struct TodayView: View {
     @EnvironmentObject private var store: Store
     @EnvironmentObject private var rest: RestController
@@ -111,11 +121,7 @@ struct TodayView: View {
     }
 
     private func start() {
-        store.startWorkout()
-        rest.requestNotificationPermission()
-        guard let s = store.data.session else { return }
-        let first = s.items.compactMap { $0.exerciseID }.first.flatMap { Library.byID[$0]?.name } ?? "Workout"
-        rest.beginWorkout(routine: s.routine.title, startedAt: s.start, first: first)
+        beginWorkout(store: store, rest: rest)
     }
 
     // MARK: Week
