@@ -100,6 +100,8 @@ struct AppData: Codable {
     /// Per-exercise notes (seat height, pin, grip).
     var notes: [String: String] = [:]
     var supersetsByDefault = true
+    /// Exercise ID → YouTube video ID you picked to replace the default demo.
+    var videoOverrides: [String: String] = [:]
 
     init() {}
 
@@ -121,6 +123,7 @@ struct AppData: Codable {
         weeklyTarget = try c.decodeIfPresent(Int.self, forKey: .weeklyTarget) ?? d.weeklyTarget
         notes = try c.decodeIfPresent([String: String].self, forKey: .notes) ?? d.notes
         supersetsByDefault = try c.decodeIfPresent(Bool.self, forKey: .supersetsByDefault) ?? d.supersetsByDefault
+        videoOverrides = try c.decodeIfPresent([String: String].self, forKey: .videoOverrides) ?? d.videoOverrides
     }
 }
 
@@ -186,7 +189,7 @@ final class Store: ObservableObject {
     static func backupData() -> Data? {
         let data = load()
         let file = ExportFile(history: data.history, hidden: data.hidden, open: data.open,
-                              overrides: data.overrides, notes: data.notes)
+                              overrides: data.overrides, notes: data.notes, videoOverrides: data.videoOverrides)
         let encoder = JSONEncoder()
         encoder.dateEncodingStrategy = .iso8601
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
@@ -819,10 +822,12 @@ final class Store: ObservableObject {
         var open: Set<Equipment>
         var overrides: [String: Prescription]
         var notes: [String: String]? = nil
+        var videoOverrides: [String: String]? = nil
     }
 
     func exportFileURL() -> URL? {
-        let file = ExportFile(history: data.history, hidden: data.hidden, open: data.open, overrides: data.overrides, notes: data.notes)
+        let file = ExportFile(history: data.history, hidden: data.hidden, open: data.open, overrides: data.overrides,
+                              notes: data.notes, videoOverrides: data.videoOverrides)
         let encoder = JSONEncoder()
         encoder.dateEncodingStrategy = .iso8601
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
@@ -855,6 +860,7 @@ final class Store: ObservableObject {
             data.hidden.formUnion(native.hidden)
             for (k, v) in native.overrides where data.overrides[k] == nil { data.overrides[k] = v }
             for (k, v) in native.notes ?? [:] where data.notes[k] == nil { data.notes[k] = v }
+            for (k, v) in native.videoOverrides ?? [:] where data.videoOverrides[k] == nil { data.videoOverrides[k] = v }
         } else {
             guard let obj = try JSONSerialization.jsonObject(with: raw) as? [String: Any],
                   (obj["app"] as? String) == "ironlog",

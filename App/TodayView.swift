@@ -254,7 +254,7 @@ private struct LineupRow: View {
                 .buttonStyle(.plain)
                 .accessibilityLabel("Form video for \(ex.name)")
                 .sheet(isPresented: $showClip) {
-                    ClipPlayerSheet(exercise: ex, source: Clips.source(for: ex.id))
+                    ClipPlayerSheet(exercise: ex)
                 }
             }
         }

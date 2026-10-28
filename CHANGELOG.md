@@ -4,6 +4,11 @@ Versions follow `MAJOR.MINOR.PATCH`. Everything before 1.0.0 is pre-launch.
 Bump MINOR for new features, PATCH for fixes, in `project.yml` (`MARKETING_VERSION`).
 The build number counts up on every CI run.
 
+## 0.5.1
+- Form videos re-picked as short demos (exercise-library clips and Shorts) instead of long tutorials.
+- Videos start muted and loop like a GIF. Tap the speaker in the player for sound.
+- "Pick a different video" in the player: searches YouTube for videos under 4 minutes inside the app. Open one and tap "Use this video" to make it that exercise's demo. Reset goes back to the default.
+
 ## 0.5.0
 - New widgets:
   - This week (medium): a big count of this week's workouts, a dot for each day, and your last workout with how long ago it was.
