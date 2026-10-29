@@ -181,6 +181,11 @@ enum RoutineID: String, CaseIterable, Codable, Identifiable {
         }
     }
 
+    var isUpper: Bool { self == .upperA || self == .upperB }
+
+    /// "A" or "B".
+    var variant: String { (self == .upperA || self == .lowerA) ? "A" : "B" }
+
     var code: String {
         switch self {
         case .upperA: return "UA"

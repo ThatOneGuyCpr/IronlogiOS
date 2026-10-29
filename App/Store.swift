@@ -595,9 +595,11 @@ final class Store: ObservableObject {
     struct DayDot: Identifiable {
         let id: Int
         let letter: String
-        let done: Bool
+        let routine: RoutineID?
         let isToday: Bool
         let isFuture: Bool
+
+        var done: Bool { routine != nil }
     }
 
     func weekDays() -> [DayDot] {
@@ -606,9 +608,10 @@ final class Store: ObservableObject {
         let letters = ["M", "T", "W", "T", "F", "S", "S"]
         return (0..<7).compactMap { i in
             guard let day = cal.date(byAdding: .day, value: i, to: start) else { return nil }
-            let done = data.history.contains { cal.isDate($0.date, inSameDayAs: day) }
+            // History is newest first, so this is the day's latest workout.
+            let routine = data.history.first { cal.isDate($0.date, inSameDayAs: day) }?.routine
             let today = cal.isDateInToday(day)
-            return DayDot(id: i, letter: letters[i], done: done, isToday: today, isFuture: !today && day > Date())
+            return DayDot(id: i, letter: letters[i], routine: routine, isToday: today, isFuture: !today && day > Date())
         }
     }
 

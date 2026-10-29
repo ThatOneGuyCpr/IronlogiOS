@@ -25,7 +25,7 @@ jobs:
         run: |
           V=$(grep -m1 'MARKETING_VERSION' project.yml | sed -E 's/.*"([^"]+)".*/\1/')
           echo "version=$V" >> "$GITHUB_OUTPUT"
-          echo "::notice title=Version::$V (build $GITHUB_RUN_NUMBER)"
+          echo "::notice title=Version::$V"
 
       - name: Install XcodeGen
         run: brew install xcodegen
@@ -76,9 +76,9 @@ jobs:
           TAG="v$VERSION"
           if gh release view "$TAG" >/dev/null 2>&1; then TAG="v$VERSION-build.$GITHUB_RUN_NUMBER"; fi
           NOTES=$(awk -v v="$VERSION" 'index($0, "## " v) == 1 {f=1; next} /^## / && f {exit} f' CHANGELOG.md)
-          printf '%s\n\nBuild %s, commit %s. Install Ironlog.ipa with SideStore.\n' "$NOTES" "$GITHUB_RUN_NUMBER" "${GITHUB_SHA::7}" > notes.md
+          printf '%s\n\nInstall Ironlog.ipa with SideStore.\n' "$NOTES" > notes.md
           gh release create "$TAG" out/Ironlog.ipa \
-            --title "Ironlog $VERSION (build $GITHUB_RUN_NUMBER)" \
+            --title "Ironlog $VERSION" \
             --notes-file notes.md \
             --latest
 

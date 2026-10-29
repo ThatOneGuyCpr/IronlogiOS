@@ -153,11 +153,21 @@ struct TodayView: View {
 
     @ViewBuilder
     private func dayDot(_ day: Store.DayDot) -> some View {
-        if day.done {
+        if let routine = day.routine {
             Circle()
                 .fill(Theme.accent)
                 .frame(width: 32, height: 32)
-                .overlay(Image(systemName: "checkmark").font(.system(size: 13, weight: .heavy)).foregroundStyle(Theme.accentInk))
+                .overlay(
+                    HStack(spacing: 0) {
+                        Image(systemName: routine.isUpper ? "arrow.up" : "arrow.down")
+                            .font(.system(size: 10, weight: .black))
+                        Text(routine.variant)
+                            .font(.system(size: 12, weight: .heavy))
+                    }
+                    .foregroundStyle(Theme.accentInk)
+                )
+                .accessibilityElement()
+                .accessibilityLabel(routine.title)
         } else if day.isToday {
             Circle()
                 .strokeBorder(Theme.accent, lineWidth: 2)

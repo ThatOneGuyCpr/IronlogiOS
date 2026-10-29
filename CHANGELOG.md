@@ -2,7 +2,11 @@
 
 Versions follow `MAJOR.MINOR.PATCH`. Everything before 1.0.0 is pre-launch.
 Bump MINOR for new features, PATCH for fixes, in `project.yml` (`MARKETING_VERSION`).
-The build number counts up on every CI run.
+Releases show only the version number.
+
+## 0.5.3
+- This week strip shows what you trained each day: an up arrow for upper days and a down arrow for lower, plus the letter (↑A, ↓B).
+- Releases and Settings show just the version number.
 
 ## 0.5.2
 - The lock screen rest timer now disappears the moment it hits zero, even with the phone locked. It only shows while you're resting.
