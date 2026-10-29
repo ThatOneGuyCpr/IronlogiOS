@@ -447,10 +447,79 @@ private struct SetTable: View {
             .foregroundStyle(Theme.sub)
 
             ForEach(Array(item.sets.enumerated()), id: \.element.id) { j, set in
-                SetRow(i: index, j: j, set: set, exercise: exercise,
-                       last: store.lastSet(exercise.id, j),
-                       isActive: j == active, onDone: onSetDone, focus: focus)
+                SwipeToDelete(onDelete: { withAnimation(.snappy) { store.removeSet(index, j) } }) {
+                    SetRow(i: index, j: j, set: set, exercise: exercise,
+                           last: store.lastSet(exercise.id, j),
+                           isActive: j == active, onDone: onSetDone, focus: focus)
+                }
             }
+        }
+    }
+}
+
+/// Swipe a set row left to reveal Delete; a long swipe deletes straight away.
+struct SwipeToDelete<Content: View>: View {
+    var onDelete: () -> Void
+    let content: Content
+    @State private var offset: CGFloat = 0
+    @State private var open = false
+    private let reveal: CGFloat = 80
+
+    init(onDelete: @escaping () -> Void, @ViewBuilder content: () -> Content) {
+        self.onDelete = onDelete
+        self.content = content()
+    }
+
+    var body: some View {
+        ZStack(alignment: .trailing) {
+            Button {
+                close()
+                onDelete()
+            } label: {
+                Image(systemName: "trash.fill")
+                    .font(.system(size: 16, weight: .bold))
+                    .foregroundStyle(Color.white)
+                    .frame(width: reveal - 8)
+                    .frame(maxHeight: .infinity)
+                    .background(Color.red, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+            }
+            .buttonStyle(.plain)
+            .opacity(offset < -4 ? 1 : 0)
+            .accessibilityHidden(true)
+
+            content
+                .offset(x: offset)
+        }
+        .contentShape(Rectangle())
+        .simultaneousGesture(
+            DragGesture(minimumDistance: 18)
+                .onChanged { v in
+                    guard abs(v.translation.width) > abs(v.translation.height) * 1.5 else { return }
+                    let base: CGFloat = open ? -reveal : 0
+                    offset = min(0, max(-reveal * 2, base + v.translation.width))
+                }
+                .onEnded { v in
+                    let base: CGFloat = open ? -reveal : 0
+                    let final = base + v.translation.width
+                    let horizontal = abs(v.translation.width) > abs(v.translation.height)
+                    if horizontal && final < -reveal * 1.6 {
+                        close()
+                        onDelete()
+                        return
+                    }
+                    withAnimation(.snappy) {
+                        open = horizontal ? final < -reveal / 2 : open
+                        offset = open ? -reveal : 0
+                    }
+                }
+        )
+        .accessibilityAction(named: "Delete set") { onDelete() }
+    }
+
+    private func close() {
+        withAnimation(.snappy) {
+            open = false
+            offset = 0
         }
     }
 }

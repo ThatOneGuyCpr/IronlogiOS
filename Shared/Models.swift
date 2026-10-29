@@ -51,6 +51,7 @@ enum Preset {
     static let compound = Prescription(sets: 3, low: 8, high: 12, rest: 90)
     static let isolation = Prescription(sets: 3, low: 10, high: 15, rest: 60)
     static let small = Prescription(sets: 3, low: 12, high: 20, rest: 60)
+    static let lateral = Prescription(sets: 3, low: 12, high: 20, rest: 45)
     static let calf = Prescription(sets: 3, low: 12, high: 20, rest: 30)
     static let abs = Prescription(sets: 3, low: 10, high: 15, rest: 60)
     static let hold = Prescription(sets: 3, low: 30, high: 60, rest: 60)
@@ -113,8 +114,8 @@ enum Library {
         ex("smith_cgp", "Close-grip Smith bench press", [.smith, .bench], Preset.compound, inc: 10),
         ex("bench_dip", "Bench dips", [.bench], Preset.isolation, bw: true),
         // Delts
-        ex("cable_lat_raise", "Cable lateral raise", [.cable], Preset.small, side: true),
-        ex("db_lat_raise", "Dumbbell lateral raise", [.dumbbells], Preset.small),
+        ex("cable_lat_raise", "Cable lateral raise", [.cable], Preset.lateral, side: true),
+        ex("db_lat_raise", "Dumbbell lateral raise", [.dumbbells], Preset.lateral),
         ex("face_pull", "Cable face pull", [.cable], Preset.small),
         // Legs
         ex("legpress", "Leg press", [.legPress], Preset.compound, inc: 10),

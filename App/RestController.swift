@@ -4,7 +4,8 @@ import UIKit
 import UserNotifications
 
 /// Rest timer: in-app countdown, a notification when rest ends (buzzes the watch
-/// when the phone is locked), and the Live Activity on the lock screen.
+/// when the phone is locked), and a lock screen Live Activity that shows only
+/// while resting and removes itself the moment the countdown hits zero.
 @MainActor
 final class RestController: ObservableObject {
     typealias State = WorkoutActivityAttributes.ContentState
@@ -13,15 +14,34 @@ final class RestController: ObservableObject {
     @Published private(set) var startedAt: Date?
 
     private var endTask: Task<Void, Never>?
-    private var activity: Activity<WorkoutActivityAttributes>?
     private var lastState: State?
-
-    init() {
-        activity = Activity<WorkoutActivityAttributes>.activities.first
-    }
+    private var routineName = "Workout"
+    private var workoutStart = Date()
 
     func requestNotificationPermission() {
         UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { _, _ in }
+    }
+
+    // MARK: Workout
+
+    func beginWorkout(routine: String, startedAt: Date, first: String) {
+        routineName = routine
+        workoutStart = startedAt
+        lastState = State(restEndsAt: nil, restStartedAt: nil, exercise: first, detail: "Set 1")
+        endAllActivities()
+    }
+
+    func endWorkout() {
+        cancelRest()
+        lastState = nil
+        endAllActivities()
+    }
+
+    /// Superset hand-off: no rest, so clear any countdown that's showing.
+    func updateProgress(next: String, detail: String) {
+        cancelRest()
+        lastState = State(restEndsAt: nil, restStartedAt: nil, exercise: next, detail: detail)
+        endAllActivities()
     }
 
     // MARK: Rest
@@ -31,8 +51,10 @@ final class RestController: ObservableObject {
         let end = now.addingTimeInterval(TimeInterval(seconds))
         startedAt = now
         endsAt = end
+        let state = State(restEndsAt: end, restStartedAt: now, exercise: next, detail: detail)
+        lastState = state
         scheduleNotification(end: end, next: next)
-        update(State(restEndsAt: end, restStartedAt: now, exercise: next, detail: detail))
+        showRestActivity(state, until: end)
         armEnd(end)
     }
 
@@ -41,18 +63,15 @@ final class RestController: ObservableObject {
         let newEnd = end.addingTimeInterval(TimeInterval(seconds))
         endsAt = newEnd
         state.restEndsAt = newEnd
+        lastState = state
         scheduleNotification(end: newEnd, next: state.exercise)
-        update(state)
+        showRestActivity(state, until: newEnd)
         armEnd(newEnd)
     }
 
     func skip() {
         cancelRest()
-        if var state = lastState {
-            state.restEndsAt = nil
-            state.restStartedAt = nil
-            update(state)
-        }
+        endAllActivities()
     }
 
     private func cancelRest() {
@@ -71,11 +90,6 @@ final class RestController: ObservableObject {
             self.endsAt = nil
             self.startedAt = nil
             UINotificationFeedbackGenerator().notificationOccurred(.success)
-            if var state = self.lastState {
-                state.restEndsAt = nil
-                state.restStartedAt = nil
-                self.update(state)
-            }
         }
     }
 
@@ -92,42 +106,25 @@ final class RestController: ObservableObject {
 
     // MARK: Live Activity
 
-    func beginWorkout(routine: String, startedAt: Date, first: String) {
-        let state = State(restEndsAt: nil, restStartedAt: nil, exercise: first, detail: "Set 1")
-        lastState = state
+    /// Shows the countdown on the lock screen, then ends it right away with a
+    /// dismissal time of `end`. iOS keeps it visible until then and removes it
+    /// on its own, so it disappears at zero even if Ironlog is suspended.
+    private func showRestActivity(_ state: State, until end: Date) {
         endAllActivities()
         guard ActivityAuthorizationInfo().areActivitiesEnabled else { return }
+        let content = ActivityContent(state: state, staleDate: end)
         do {
-            activity = try Activity<WorkoutActivityAttributes>.request(
-                attributes: WorkoutActivityAttributes(routine: routine, startedAt: startedAt),
-                content: ActivityContent(state: state, staleDate: nil),
+            let activity = try Activity<WorkoutActivityAttributes>.request(
+                attributes: WorkoutActivityAttributes(routine: routineName, startedAt: workoutStart),
+                content: content,
                 pushType: nil
             )
+            Task {
+                await activity.end(content, dismissalPolicy: .after(end))
+            }
         } catch {
-            activity = nil
+            // Live Activities turned off; the notification still covers it.
         }
-    }
-
-    func updateProgress(next: String, detail: String) {
-        var state = lastState ?? State(restEndsAt: nil, restStartedAt: nil, exercise: next, detail: detail)
-        state.exercise = next
-        state.detail = detail
-        update(state)
-    }
-
-    private func update(_ state: State) {
-        lastState = state
-        guard let activity else { return }
-        Task {
-            await activity.update(ActivityContent(state: state, staleDate: nil))
-        }
-    }
-
-    func endWorkout() {
-        cancelRest()
-        activity = nil
-        lastState = nil
-        endAllActivities()
     }
 
     private func endAllActivities() {

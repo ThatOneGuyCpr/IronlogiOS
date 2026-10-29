@@ -4,6 +4,12 @@ Versions follow `MAJOR.MINOR.PATCH`. Everything before 1.0.0 is pre-launch.
 Bump MINOR for new features, PATCH for fixes, in `project.yml` (`MARKETING_VERSION`).
 The build number counts up on every CI run.
 
+## 0.5.2
+- The lock screen rest timer now disappears the moment it hits zero, even with the phone locked. It only shows while you're resting.
+- Fixed: tapping the collapse arrow on some exercise cards opened the video instead. The video thumbnail's hidden overflow was catching the tap.
+- Swipe a set left to delete it. A long swipe deletes right away.
+- Lateral raises (cable and dumbbell) default to 45 seconds of rest.
+
 ## 0.5.1
 - Form videos re-picked as short demos (exercise-library clips and Shorts) instead of long tutorials.
 - Videos start muted and loop like a GIF. Tap the speaker in the player for sound.

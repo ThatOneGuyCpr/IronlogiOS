@@ -380,6 +380,15 @@ final class Store: ObservableObject {
         }
     }
 
+    /// Swipe-to-delete on a set. Deleting the last one skips the exercise.
+    func removeSet(_ i: Int, _ j: Int) {
+        mutateItem(i) { item in
+            guard item.sets.indices.contains(j) else { return }
+            item.sets.remove(at: j)
+            if item.sets.isEmpty { item.skipped = true }
+        }
+    }
+
     func removeLastSet(_ i: Int) {
         mutateItem(i) { item in
             if item.sets.count > 1, item.sets.last?.done == false { item.sets.removeLast() }

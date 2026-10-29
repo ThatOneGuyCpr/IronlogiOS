@@ -135,6 +135,8 @@ struct ClipBox: View {
                 case .youtube(let id):
                     AsyncImage(url: URL(string: "https://img.youtube.com/vi/\(id)/hqdefault.jpg")) { image in
                         image.resizable().scaledToFill()
+                            .frame(minWidth: 0, maxWidth: .infinity, minHeight: 0, maxHeight: .infinity)
+                            .clipped()
                     } placeholder: {
                         Theme.video
                     }
@@ -165,6 +167,9 @@ struct ClipBox: View {
             .frame(height: 140)
             .frame(maxWidth: .infinity)
             .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+            // The thumbnail is taller than the box; without this its hidden overflow
+            // still caught taps meant for the buttons above it.
+            .contentShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
         }
         .buttonStyle(.plain)
         .accessibilityLabel("Play form clip for \(exercise.name)")
