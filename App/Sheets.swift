@@ -220,19 +220,27 @@ struct FinishSheet: View {
     @Environment(\.openURL) private var openURL
     @Environment(\.dismiss) private var dismiss
     let entry: HistoryEntry
+    @State private var appeared = false
 
     var body: some View {
         let records = store.records(for: entry)
+        let party = store.data.celebrations
         ScrollView {
             VStack(spacing: 20) {
-                Text("Workout saved")
-                    .font(.system(size: 24, weight: .heavy))
-                    .foregroundStyle(Theme.ink)
-                    .padding(.top, 28)
+                VStack(spacing: 8) {
+                    Image(systemName: records.isEmpty ? "checkmark.circle.fill" : "trophy.circle.fill")
+                        .font(.system(size: 46))
+                        .foregroundStyle(Theme.accent)
+                        .symbolEffect(.bounce, value: appeared)
+                    Text("Workout saved")
+                        .font(.system(size: 24, weight: .heavy))
+                        .foregroundStyle(Theme.ink)
+                }
+                .padding(.top, 24)
                 HStack(spacing: 28) {
-                    stat("\(entry.setCount)", "sets")
-                    stat(entry.volume.formatted(.number.precision(.fractionLength(0))), "lb moved")
-                    stat("\(entry.minutes)", "min")
+                    stat(Double(entry.setCount), "sets", delay: 0.1)
+                    stat(entry.volume, "lb moved", delay: 0.2)
+                    stat(Double(entry.minutes), "min", delay: 0.3)
                 }
                 if !records.isEmpty {
                     VStack(alignment: .leading, spacing: 10) {
@@ -255,6 +263,8 @@ struct FinishSheet: View {
                     .background(Theme.promptBg, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
                     .overlay(RoundedRectangle(cornerRadius: 20, style: .continuous).stroke(Theme.promptBorder, lineWidth: 1))
                     .padding(.horizontal, 24)
+                    .scaleEffect(appeared || !party ? 1 : 0.92)
+                    .opacity(appeared || !party ? 1 : 0)
                 }
                 if store.data.healthViaShortcut, let url = store.healthShortcutURL(minutes: entry.minutes) {
                     Button {
@@ -272,13 +282,27 @@ struct FinishSheet: View {
             .padding(.bottom, 24)
         }
         .background { SkyBackground() }
+        .overlay {
+            if party && !records.isEmpty {
+                ConfettiView(count: 120, duration: 3.5).ignoresSafeArea()
+            }
+        }
+        .sensoryFeedback(.success, trigger: appeared) { _, new in new && party && !records.isEmpty }
+        .onAppear {
+            withAnimation(.spring(duration: 0.5, bounce: 0.35).delay(0.35)) { appeared = true }
+        }
     }
 
-    private func stat(_ value: String, _ label: String) -> some View {
+    private func stat(_ value: Double, _ label: String, delay: Double) -> some View {
         VStack(spacing: 2) {
-            Text(value)
-                .font(.system(size: 28, weight: .heavy))
-                .monospacedDigit()
+            Group {
+                if store.data.celebrations {
+                    CountUpText(value: value, delay: delay)
+                } else {
+                    Text(value.formatted(.number.precision(.fractionLength(0))))
+                }
+            }
+                .font(Theme.num(28))
                 .foregroundStyle(Theme.ink)
             Text(label.uppercased())
                 .font(.system(size: 11, weight: .bold))

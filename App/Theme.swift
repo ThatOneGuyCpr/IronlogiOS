@@ -21,19 +21,27 @@ extension Color {
 }
 
 enum Theme {
-    static let bg = Color.dyn(0xEDF3FA, 0x07111F)
-    static let blob1 = Color.dyn(0xC9DFF8, 0x123462)
-    static let blob2 = Color.dyn(0xD8E8FB, 0x0C2443)
+    // Accent-driven colors come from the chosen palette.
+    static var palette: Palette { Palette.current }
+    static var bg: Color {
+        backgroundStyle == .black ? Color.dyn(Palette.current.bg.0, 0x000000) : palette.bgColor
+    }
+    static var blob1: Color { palette.blob1Color }
+    static var blob2: Color { palette.blob2Color }
+    static var accent: Color { palette.accentColor }
+    static var accentInk: Color { palette.accentInkColor }
+    static var accentSoft: Color { palette.accentSoftColor }
+    static var accentText: Color { palette.accentTextColor }
+    static var promptBg: Color { palette.promptBgColor }
+    static var promptBorder: Color { palette.promptBorderColor }
+    static var video: Color { palette.videoColor }
+
     static let card = Color.dyn(0xFFFFFF, 0xFFFFFF, la: 0.82, da: 0.065)
     static let cardBorder = Color.dyn(0xFFFFFF, 0xFFFFFF, la: 0.95, da: 0.11)
     static let ink = Color.dyn(0x0B1B2E, 0xF2F6FB)
     static let sub = Color.dyn(0x4A5D73, 0xA9B8CA)
     static let faint = Color.dyn(0xE4ECF5, 0xFFFFFF, da: 0.08)
     static let chip = Color.dyn(0xEEF3F9, 0xFFFFFF, da: 0.08)
-    static let accent = Color.dyn(0x1F6FEB, 0x4C9BFF)
-    static let accentInk = Color.dyn(0xFFFFFF, 0x05101F)
-    static let accentSoft = Color.dyn(0xE1EDFD, 0x4C9BFF, da: 0.17)
-    static let accentText = Color.dyn(0x1558C0, 0x8DC0FF)
     static let field = Color.dyn(0xF4F8FC, 0xFFFFFF, da: 0.07)
     static let fieldBorder = Color.dyn(0xCCDAEA, 0xFFFFFF, da: 0.16)
     static let good = Color.dyn(0x15803D, 0x34C759)
@@ -41,13 +49,50 @@ enum Theme {
     static let goodRow = Color.dyn(0xEAF7EF, 0x34C759, da: 0.10)
     static let goodText = Color.dyn(0x15803D, 0x5BD68A)
     static let warn = Color.dyn(0xB42318, 0xFF8A80)
-    static let promptBg = Color.dyn(0xDCEAFD, 0x4C9BFF, da: 0.14)
-    static let promptBorder = Color.dyn(0xBCD5F7, 0x4C9BFF, da: 0.35)
-    static let video = Color.dyn(0x2B5FA8, 0x1A3A66)
     static let shadow = Color.dyn(0x102A4D, 0x000000, la: 0.08, da: 0.35)
 
     // Kept so older call sites still compile.
-    static let sky = accent
+    static var sky: Color { accent }
+
+    // Look settings, set by the Store.
+    static var backgroundStyle: BackgroundStyle = .sky
+    static var numberStyle: NumberStyle = .standard
+
+    /// Font for big numbers (weights, timers, stats), following the Numbers setting.
+    static func num(_ size: CGFloat, _ weight: Font.Weight = .heavy) -> Font {
+        switch numberStyle {
+        case .standard:
+            return Font.system(size: size, weight: weight).monospacedDigit()
+        case .rounded:
+            return Font.system(size: size, weight: weight, design: .rounded).monospacedDigit()
+        case .condensed:
+            return Font.system(size: size * 1.12, weight: weight == .heavy ? .black : weight).width(.condensed).monospacedDigit()
+        }
+    }
+}
+
+enum BackgroundStyle: String, CaseIterable, Identifiable {
+    case sky, plain, black
+    var id: String { rawValue }
+    var label: String {
+        switch self {
+        case .sky: return "Sky"
+        case .plain: return "Plain"
+        case .black: return "True black"
+        }
+    }
+}
+
+enum NumberStyle: String, CaseIterable, Identifiable {
+    case standard, rounded, condensed
+    var id: String { rawValue }
+    var label: String {
+        switch self {
+        case .standard: return "Standard"
+        case .rounded: return "Rounded"
+        case .condensed: return "Condensed"
+        }
+    }
 }
 
 // MARK: - Background
@@ -56,7 +101,15 @@ struct SkyBackground: View {
     var body: some View {
         ZStack {
             Theme.bg
-            GeometryReader { geo in
+            if Theme.backgroundStyle == .sky {
+                blobs
+            }
+        }
+        .ignoresSafeArea()
+    }
+
+    private var blobs: some View {
+        GeometryReader { geo in
                 Circle()
                     .fill(RadialGradient(colors: [Theme.blob1, Theme.blob1.opacity(0)], center: .center, startRadius: 0, endRadius: 220))
                     .frame(width: 440, height: 440)
@@ -65,9 +118,7 @@ struct SkyBackground: View {
                     .fill(RadialGradient(colors: [Theme.blob2, Theme.blob2.opacity(0)], center: .center, startRadius: 0, endRadius: 220))
                     .frame(width: 440, height: 440)
                     .position(x: geo.size.width + 20, y: geo.size.height * 0.62)
-            }
         }
-        .ignoresSafeArea()
     }
 }
 

@@ -4,6 +4,13 @@ Versions follow `MAJOR.MINOR.PATCH`. Everything before 1.0.0 is pre-launch.
 Bump MINOR for new features, PATCH for fixes, in `project.yml` (`MARKETING_VERSION`).
 Releases show only the version number.
 
+## 0.6.0
+- Pick a color in Settings › Look: Glacier, Ember, Gold, Volt, Grape, Mint, Rose or Mono. It changes the app, the widgets and the lock screen rest timer.
+- 13 app icons in Settings › App icon: video game (8-Bit, Pocket, Arcade, Loot, Level Up), 80s wrestling (Main Event, Title Belt, Grit), minimal (Studio, Graphite) and fitness (Ember, Blackout). Each has dark and tinted versions. After you switch, Ironlog offers the matching color.
+- Background: Sky, Plain, or True black for dark mode.
+- Numbers: Standard, Rounded or Condensed for weights, the rest timer and stats.
+- Records get celebrated: beat your heaviest weight (or your most reps at it) mid-workout and you get confetti, a banner and a buzz. The finish screen animates its stats and throws confetti when you set a record. Turn it off with Celebrate records.
+
 ## 0.5.3
 - This week strip shows what you trained each day: an up arrow for upper days and a down arrow for lower, plus the letter (↑A, ↓B).
 - Releases and Settings show just the version number.

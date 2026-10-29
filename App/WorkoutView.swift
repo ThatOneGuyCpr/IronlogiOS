@@ -591,8 +591,7 @@ struct SetRow: View {
         TextField(placeholder, text: text)
             .keyboardType(keyboard)
             .multilineTextAlignment(.center)
-            .font(.system(size: 19, weight: .bold))
-            .monospacedDigit()
+            .font(Theme.num(19, .bold))
             .foregroundStyle(Theme.ink)
             .frame(maxWidth: .infinity, minHeight: 46)
             .background(set.done ? Color.clear : Theme.field, in: RoundedRectangle(cornerRadius: 13, style: .continuous))
@@ -632,8 +631,7 @@ struct RestBar: View {
                         .tracking(1)
                         .opacity(0.85)
                     Text(timerInterval: range, countsDown: true)
-                        .font(.system(size: 30, weight: .heavy))
-                        .monospacedDigit()
+                        .font(Theme.num(30))
                 }
                 Spacer(minLength: 0)
                 Button("+15s") { rest.add(15) }

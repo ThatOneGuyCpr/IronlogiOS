@@ -102,6 +102,11 @@ struct AppData: Codable {
     var supersetsByDefault = true
     /// Exercise ID → YouTube video ID you picked to replace the default demo.
     var videoOverrides: [String: String] = [:]
+    /// Look settings.
+    var accent: String = "glacier"
+    var background: String = "sky"
+    var numberStyle: String = "standard"
+    var celebrations = true
 
     init() {}
 
@@ -124,6 +129,10 @@ struct AppData: Codable {
         notes = try c.decodeIfPresent([String: String].self, forKey: .notes) ?? d.notes
         supersetsByDefault = try c.decodeIfPresent(Bool.self, forKey: .supersetsByDefault) ?? d.supersetsByDefault
         videoOverrides = try c.decodeIfPresent([String: String].self, forKey: .videoOverrides) ?? d.videoOverrides
+        accent = try c.decodeIfPresent(String.self, forKey: .accent) ?? d.accent
+        background = try c.decodeIfPresent(String.self, forKey: .background) ?? d.background
+        numberStyle = try c.decodeIfPresent(String.self, forKey: .numberStyle) ?? d.numberStyle
+        celebrations = try c.decodeIfPresent(Bool.self, forKey: .celebrations) ?? d.celebrations
     }
 }
 
@@ -151,8 +160,17 @@ extension Array {
 @MainActor
 final class Store: ObservableObject {
     @Published var data: AppData {
-        didSet { scheduleSave() }
+        didSet {
+            scheduleSave()
+            if data.accent != oldValue.accent || data.background != oldValue.background || data.numberStyle != oldValue.numberStyle {
+                applyLook(accentChanged: data.accent != oldValue.accent)
+            }
+        }
     }
+    /// A record just set mid-workout, shown as a banner with confetti.
+    @Published var celebration: Celebration?
+    /// Exercises that already celebrated this workout, so it fires once each.
+    private var celebrated: Set<String> = []
     /// Swaps made since the equipment sheet was opened.
     @Published var changes: [EquipmentChange] = []
     /// Shown as a summary sheet after finishing.
@@ -162,8 +180,25 @@ final class Store: ObservableObject {
 
     init() {
         data = Store.load()
+        applyLook(accentChanged: true)
         syncWidget()
     }
+
+    // MARK: Look
+
+    /// Pushes the look settings to the theme and shares the color with the widgets.
+    func applyLook(accentChanged: Bool) {
+        Palette.current = Palette.named(data.accent)
+        Theme.backgroundStyle = BackgroundStyle(rawValue: data.background) ?? .sky
+        Theme.numberStyle = NumberStyle(rawValue: data.numberStyle) ?? .standard
+        if accentChanged {
+            SharedStore.defaults.set(Palette.current.id, forKey: Palette.defaultsKey)
+            WidgetCenter.shared.reloadAllTimelines()
+        }
+    }
+
+    /// Changes everything that depends on the look in one go, so views rebuild once.
+    var lookID: String { data.accent + data.background + data.numberStyle }
 
     // MARK: Persistence
 
@@ -336,6 +371,7 @@ final class Store: ObservableObject {
                     superset: data.supersetsByDefault && slots[i].pairNext && i + 1 < slots.count)
         }
         data.session = Session(routine: routine, start: Date(), items: items)
+        celebrated = []
     }
 
     private func mutateItem(_ i: Int, _ body: (inout ItemLog) -> Void) {
@@ -370,7 +406,36 @@ final class Store: ObservableObject {
             item.sets[j].done = true
             completed = true
         }
+        if completed { checkRecord(i, j) }
         return completed
+    }
+
+    struct Celebration: Identifiable, Equatable {
+        let id = UUID()
+        let title: String
+        let detail: String
+    }
+
+    /// Celebrates a set that beats everything logged before for that exercise.
+    private func checkRecord(_ i: Int, _ j: Int) {
+        guard data.celebrations, let s = data.session, let item = s.items[safe: i], let id = item.exerciseID,
+              let ex = Library.byID[id], !ex.timed, !celebrated.contains(id),
+              let set = item.sets[safe: j], let w = Double(set.weight), let r = Int(set.reps) else { return }
+        let previous = data.history.flatMap { e in e.items.filter { $0.exerciseID == id }.flatMap { $0.sets } }
+        guard !previous.isEmpty else { return }
+        let prevTop = previous.map { $0.weight }.max() ?? 0
+        if w > 0 && w > prevTop {
+            celebrated.insert(id)
+            celebration = Celebration(title: "New record", detail: "\(ex.name): \(Store.fmt(w)) lb, heaviest yet")
+            return
+        }
+        if w > 0 && w == prevTop {
+            let prevReps = previous.filter { $0.weight >= w }.map { $0.reps }.max() ?? 0
+            if r > prevReps {
+                celebrated.insert(id)
+                celebration = Celebration(title: "New record", detail: "\(ex.name): \(r) reps at \(Store.fmt(w)) lb")
+            }
+        }
     }
 
     func addSet(_ i: Int) {

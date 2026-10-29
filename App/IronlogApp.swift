@@ -51,7 +51,28 @@ struct RootView: View {
                 SettingsView()
             }
         }
+        // Colors are read from the theme when views draw, so rebuild everything when the look changes.
+        .id(store.lookID)
         .tint(Theme.accent)
+        .overlay(alignment: .top) {
+            if let c = store.celebration {
+                ZStack(alignment: .top) {
+                    ConfettiView()
+                        .ignoresSafeArea()
+                    RecordBanner(celebration: c)
+                        .padding(.top, 4)
+                        .transition(.move(edge: .top).combined(with: .opacity))
+                }
+                .task(id: c.id) {
+                    try? await Task.sleep(for: .seconds(3.2))
+                    if store.celebration?.id == c.id {
+                        withAnimation(.snappy) { store.celebration = nil }
+                    }
+                }
+            }
+        }
+        .animation(.snappy, value: store.celebration)
+        .sensoryFeedback(.success, trigger: store.celebration?.id) { _, new in new != nil }
         .sheet(item: $store.lastFinished) { entry in
             FinishSheet(entry: entry)
                 .presentationDetents([.medium, .large])

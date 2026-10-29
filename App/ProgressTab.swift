@@ -48,8 +48,7 @@ struct ProgressTab: View {
     private func tile(_ value: String, _ label: String) -> some View {
         VStack(alignment: .leading, spacing: 2) {
             Text(value)
-                .font(.system(size: 22, weight: .heavy))
-                .monospacedDigit()
+                .font(Theme.num(22))
                 .foregroundStyle(Theme.ink)
                 .lineLimit(1)
                 .minimumScaleFactor(0.7)

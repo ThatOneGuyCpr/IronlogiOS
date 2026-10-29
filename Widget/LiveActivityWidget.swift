@@ -61,7 +61,7 @@ struct WorkoutLiveActivity: Widget {
     var body: some WidgetConfiguration {
         ActivityConfiguration(for: WorkoutActivityAttributes.self) { context in
             WorkoutLockView(context: context)
-                .activityBackgroundTint(Color(red: 0.07, green: 0.22, blue: 0.45).opacity(0.9))
+                .activityBackgroundTint(Palette.stored.deepColor.opacity(0.9))
                 .activitySystemActionForegroundColor(Color.white)
         } dynamicIsland: { context in
             DynamicIsland {
@@ -87,9 +87,11 @@ struct WorkoutLiveActivity: Widget {
                 RestTimerText(state: context.state)
                     .monospacedDigit()
                     .frame(maxWidth: 44)
+                    .foregroundStyle(Palette.stored.swatchDark)
             } minimal: {
                 Image(systemName: "timer")
             }
+            .keylineTint(Palette.stored.swatchDark)
         }
         .supplementalActivityFamilies([.small])
     }

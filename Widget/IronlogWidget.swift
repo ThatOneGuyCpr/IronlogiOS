@@ -22,15 +22,16 @@ enum WP {
 
     static let ink = dyn(0x0B1B2E, 0xF2F6FB)
     static let sub = dyn(0x4A5D73, 0xA9B8CA)
-    static let accent = dyn(0x1F6FEB, 0x4C9BFF)
-    static let accentInk = dyn(0xFFFFFF, 0x05101F)
+    // Accent follows the color picked in the app.
+    static var accent: Color { Palette.stored.accentColor }
+    static var accentInk: Color { Palette.stored.accentInkColor }
     static let faint = dyn(0xDCE6F1, 0xFFFFFF, da: 0.12)
     static let inner = dyn(0xEEF4FB, 0xFFFFFF, da: 0.07)
     static let rule = dyn(0xDCE6F1, 0xFFFFFF, da: 0.10)
     static let good = dyn(0x15803D, 0x5BD68A)
     static let outline = dyn(0xCCDAEA, 0xFFFFFF, da: 0.2)
-    static let top = dyn(0xFFFFFF, 0x0F2342)
-    static let bottom = dyn(0xE6F0FC, 0x0A1830)
+    static var top: Color { Palette.stored.widgetTopColor }
+    static var bottom: Color { Palette.stored.widgetBottomColor }
 }
 
 struct WidgetSky: View {

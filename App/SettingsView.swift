@@ -12,12 +12,41 @@ struct SettingsView: View {
     var body: some View {
         NavigationStack {
             Form {
-                Section("Look and goals") {
+                Section("Look") {
                     Picker("Appearance", selection: $store.data.appearance) {
                         ForEach(Appearance.allCases) { a in
                             Text(a.label).tag(a.rawValue)
                         }
                     }
+                    ColorPickerRow()
+                    Picker("Background", selection: $store.data.background) {
+                        ForEach(BackgroundStyle.allCases) { b in
+                            Text(b.label).tag(b.rawValue)
+                        }
+                    }
+                    VStack(alignment: .leading, spacing: 10) {
+                        Picker("Numbers", selection: $store.data.numberStyle) {
+                            ForEach(NumberStyle.allCases) { n in
+                                Text(n.label).tag(n.rawValue)
+                            }
+                        }
+                        HStack(alignment: .firstTextBaseline, spacing: 14) {
+                            Text("185").font(Theme.num(34))
+                            Text("lb").font(.system(size: 15, weight: .semibold)).foregroundStyle(.secondary)
+                            Spacer()
+                            Text("1:30").font(Theme.num(28))
+                                .foregroundStyle(Theme.accentText)
+                        }
+                        .accessibilityHidden(true)
+                    }
+                    Toggle("Celebrate records", isOn: $store.data.celebrations)
+                }
+
+                Section("App icon") {
+                    IconPicker()
+                }
+
+                Section("Goals") {
                     Stepper("Workouts per week: \(store.data.weeklyTarget)", value: $store.data.weeklyTarget, in: 1...7)
                     Toggle("Pair supersets by default", isOn: $store.data.supersetsByDefault)
                 }
