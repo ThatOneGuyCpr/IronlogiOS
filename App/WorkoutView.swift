@@ -25,7 +25,7 @@ struct WorkoutView: View {
                     let current = s.items.firstIndex { $0.exerciseID != nil && !$0.skipped && !$0.allDone }
                     let currentPartner = current.flatMap { store.partner(of: $0) }
                     let total = s.items.count
-                    VStack(alignment: .leading, spacing: 12) {
+                    VStack(alignment: .leading, spacing: store.data.compact ? 8 : 12) {
                         progressBar(s)
                         ForEach(Array(s.items.enumerated()), id: \.element.id) { i, item in
                             let label = s.routine.slots[safe: item.slot]?.label ?? ""
@@ -47,6 +47,7 @@ struct WorkoutView: View {
                                     item: item,
                                     slotLabel: label,
                                     isNext: current.map { i == nextIndex(after: $0, in: s) } ?? false,
+                                    compact: store.data.compact,
                                     onTap: {
                                         if item.exerciseID == nil {
                                             swapIndex = IndexBox(id: i)
@@ -121,7 +122,9 @@ struct WorkoutView: View {
             }
             .safeAreaInset(edge: .bottom) {
                 if rest.endsAt != nil {
-                    RestBar()
+                    Group {
+                        if store.data.restStyle == "ring" { RestRing() } else { RestBar() }
+                    }
                         .padding(.horizontal, 16)
                         .padding(.bottom, 8)
                         .transition(.move(edge: .bottom).combined(with: .opacity))
@@ -188,6 +191,7 @@ struct WorkoutView: View {
                     }
                 }
                 .frame(height: 6)
+                .animation(.snappy, value: fraction)
             }
         }
         .accessibilityElement()
@@ -232,6 +236,7 @@ private struct CompactRow: View {
     let item: ItemLog
     let slotLabel: String
     let isNext: Bool
+    var compact = false
     var onTap: () -> Void
 
     var body: some View {
@@ -257,7 +262,7 @@ private struct CompactRow: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .glacierCard(radius: 20, padding: 14)
+        .glacierCard(radius: 20, padding: compact ? 10 : 14)
         .opacity(item.allDone || item.skipped ? 0.8 : 1)
     }
 
@@ -306,11 +311,13 @@ struct FocusCard: View {
     var onCollapse: (() -> Void)?
     var focus: FocusState<SetField?>.Binding
     @State private var editingNote = false
+    @State private var showClip = false
 
     var body: some View {
         let ex = item.exerciseID.flatMap { Library.byID[$0] }
         let paired = store.partner(of: index) != nil
-        VStack(alignment: .leading, spacing: 14) {
+        let compact = store.data.compact
+        VStack(alignment: .leading, spacing: compact ? 10 : 14) {
             HStack(alignment: .top, spacing: 10) {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("\(paired ? "SUPERSET · " : "")\(slotLabel.uppercased()) · \(index + 1) OF \(total)")
@@ -322,6 +329,19 @@ struct FocusCard: View {
                         .foregroundStyle(Theme.ink)
                 }
                 Spacer(minLength: 0)
+                if compact, ex != nil {
+                    Button {
+                        showClip = true
+                    } label: {
+                        Image(systemName: "play.fill")
+                            .font(.system(size: 13, weight: .bold))
+                            .frame(width: 36, height: 36)
+                            .overlay(Circle().stroke(Theme.fieldBorder, lineWidth: 1))
+                            .foregroundStyle(Theme.accentText)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("Form video")
+                }
                 if let onCollapse {
                     Button(action: onCollapse) {
                         Image(systemName: "chevron.up")
@@ -380,7 +400,9 @@ struct FocusCard: View {
                     .background(Theme.chip, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
                 }
 
-                ClipBox(exercise: ex)
+                if !compact {
+                    ClipBox(exercise: ex)
+                }
 
                 let p = store.prescription(ex.id)
                 HStack(spacing: 8) {
@@ -418,7 +440,13 @@ struct FocusCard: View {
                     .buttonStyle(OutlineButtonStyle())
             }
         }
-        .glacierCard(radius: 28, padding: 18)
+        .glacierCard(radius: 28, padding: compact ? 14 : 18)
+        .sheet(isPresented: $showClip) {
+            if let ex {
+                ClipPlayerSheet(exercise: ex)
+                    .presentationDetents([.medium, .large])
+            }
+        }
     }
 }
 
@@ -571,7 +599,8 @@ struct SetRow: View {
             } label: {
                 Image(systemName: "checkmark")
                     .font(.system(size: 17, weight: .heavy))
-                    .frame(width: 48, height: 46)
+                    .symbolEffect(.bounce, value: set.done)
+                    .frame(width: 48, height: rowHeight)
                     .foregroundStyle(set.done ? Theme.goodInk : Theme.sub)
                     .background(set.done ? Theme.good : Color.clear, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
                     .overlay(
@@ -582,18 +611,21 @@ struct SetRow: View {
             .buttonStyle(.plain)
             .accessibilityLabel(set.done ? "Set \(j + 1) done" : "Mark set \(j + 1) done")
         }
-        .padding(.vertical, 4)
+        .padding(.vertical, store.data.compact ? 2 : 4)
         .padding(.horizontal, 2)
         .background(set.done ? Theme.goodRow : Color.clear, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .animation(.snappy(duration: 0.25), value: set.done)
     }
+
+    private var rowHeight: CGFloat { store.data.compact ? 38 : 46 }
 
     private func field(placeholder: String, text: Binding<String>, keyboard: UIKeyboardType, label: String) -> some View {
         TextField(placeholder, text: text)
             .keyboardType(keyboard)
             .multilineTextAlignment(.center)
-            .font(Theme.num(19, .bold))
+            .font(Theme.num(store.data.compact ? 17 : 19, .bold))
             .foregroundStyle(Theme.ink)
-            .frame(maxWidth: .infinity, minHeight: 46)
+            .frame(maxWidth: .infinity, minHeight: rowHeight)
             .background(set.done ? Color.clear : Theme.field, in: RoundedRectangle(cornerRadius: 13, style: .continuous))
             .overlay(
                 RoundedRectangle(cornerRadius: 13, style: .continuous)
@@ -652,6 +684,67 @@ struct RestBar: View {
             .padding(.leading, 16)
             .padding(.trailing, 12)
             .background(Theme.accent, in: RoundedRectangle(cornerRadius: 28, style: .continuous))
+            .shadow(color: Theme.shadow, radius: 18, y: 8)
+        }
+    }
+}
+
+// MARK: - Rest ring
+
+/// Big ring version of the rest timer, picked in Settings › Workout screen.
+struct RestRing: View {
+    @EnvironmentObject private var rest: RestController
+
+    var body: some View {
+        if let end = rest.endsAt, let start = rest.startedAt {
+            let range = start...max(start, end)
+            HStack(spacing: 16) {
+                Button { rest.add(15) } label: {
+                    Text("+15s")
+                        .font(.system(size: 15, weight: .bold))
+                        .frame(width: 64, height: 64)
+                        .background(Theme.accentSoft, in: Circle())
+                        .foregroundStyle(Theme.accentText)
+                }
+                ZStack {
+                    TimelineView(.animation(minimumInterval: 1.0 / 30)) { context in
+                        let total = max(1, end.timeIntervalSince(start))
+                        let left = max(0, end.timeIntervalSince(context.date))
+                        ZStack {
+                            Circle().stroke(Theme.faint, lineWidth: 12)
+                            Circle()
+                                .trim(from: 0, to: left / total)
+                                .stroke(Theme.accent, style: StrokeStyle(lineWidth: 12, lineCap: .round))
+                                .rotationEffect(.degrees(-90))
+                        }
+                    }
+                    .accessibilityHidden(true)
+                    VStack(spacing: 0) {
+                        Text("REST")
+                            .font(.system(size: 11, weight: .bold))
+                            .tracking(1)
+                            .foregroundStyle(Theme.sub)
+                        Text(timerInterval: range, countsDown: true)
+                            .font(Theme.num(34))
+                            .foregroundStyle(Theme.ink)
+                            .multilineTextAlignment(.center)
+                            .frame(width: 112)
+                    }
+                }
+                .frame(width: 148, height: 148)
+                Button { rest.skip() } label: {
+                    Text("Skip")
+                        .font(.system(size: 15, weight: .bold))
+                        .frame(width: 64, height: 64)
+                        .background(Theme.accent, in: Circle())
+                        .foregroundStyle(Theme.accentInk)
+                }
+            }
+            .buttonStyle(.plain)
+            .padding(.vertical, 16)
+            .frame(maxWidth: .infinity)
+            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 34, style: .continuous))
+            .overlay(RoundedRectangle(cornerRadius: 34, style: .continuous).stroke(Theme.cardBorder, lineWidth: 1))
             .shadow(color: Theme.shadow, radius: 18, y: 8)
         }
     }

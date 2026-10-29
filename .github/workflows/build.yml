@@ -65,6 +65,8 @@ jobs:
           if [ -d stage/Payload ]; then
             echo "::notice title=Bundles::$(cd stage/Payload && find . -maxdepth 4 \( -name '*.app' -o -name '*.appex' \) | tr '\n' ' ')"
             echo "::notice title=Sizes::$(ls -la out | awk 'NR>1{print $5, $9}' | tr '\n' ' ')"
+            ALT=$(/usr/libexec/PlistBuddy -c "Print :CFBundleIcons:CFBundleAlternateIcons" stage/Payload/Ironlog.app/Info.plist 2>/dev/null | grep -o 'AppIcon-[a-z]*' | sort -u | tr '\n' ' ')
+            echo "::notice title=Alternate icons::${ALT:-none}"
             echo "::notice title=App entitlements::$(codesign -d --entitlements - --xml stage/Payload/Ironlog.app 2>/dev/null | tr -d '\n\t' | head -c 600)"
           fi
 

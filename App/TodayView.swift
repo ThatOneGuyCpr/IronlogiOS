@@ -133,6 +133,7 @@ struct TodayView: View {
                 SectionTitle("This week")
                 Spacer()
                 Text("\(done) of \(store.data.weeklyTarget) done")
+                    .contentTransition(.numericText(value: Double(done)))
                     .font(.system(size: 13, weight: .semibold))
                     .foregroundStyle(Theme.sub)
             }

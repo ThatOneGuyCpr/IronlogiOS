@@ -35,6 +35,7 @@ struct RootView: View {
     @EnvironmentObject private var rest: RestController
     @State private var tab: AppTab = .train
     @State private var notice: String?
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         TabView(selection: $tab) {
@@ -57,8 +58,10 @@ struct RootView: View {
         .overlay(alignment: .top) {
             if let c = store.celebration {
                 ZStack(alignment: .top) {
-                    ConfettiView()
-                        .ignoresSafeArea()
+                    if !reduceMotion {
+                        ConfettiView()
+                            .ignoresSafeArea()
+                    }
                     RecordBanner(celebration: c)
                         .padding(.top, 4)
                         .transition(.move(edge: .top).combined(with: .opacity))

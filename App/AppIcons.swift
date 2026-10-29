@@ -3,12 +3,28 @@ import UIKit
 
 /// Home screen icons. Each alternate lives in the asset catalog as AppIcon-<id>,
 /// with a small IconPreview-<id> image for the picker.
+enum IconUnlock: Hashable {
+    case workouts(Int)
+    case records(Int)
+    case streak(Int)
+
+    var text: String {
+        switch self {
+        case .workouts(let n): return n == 1 ? "Finish a workout" : "\(n) workouts"
+        case .records(let n): return n == 1 ? "Set a record" : "\(n) records"
+        case .streak(let n): return "\(n)-week streak"
+        }
+    }
+}
+
 struct AppIconOption: Identifiable, Hashable {
     let id: String
     let name: String
     let group: String
     /// Color theme that goes with it, offered when you switch.
     let palette: String
+    /// What it takes to unlock when "Unlock icons by training" is on. nil is always open.
+    var unlock: IconUnlock? = nil
 
     /// Name passed to setAlternateIconName. nil is the primary icon.
     var assetName: String? { id == "glacier" ? nil : "AppIcon-\(id)" }
@@ -18,14 +34,14 @@ struct AppIconOption: Identifiable, Hashable {
 enum AppIcons {
     static let all: [AppIconOption] = [
         AppIconOption(id: "glacier", name: "Glacier", group: "Classic", palette: "glacier"),
-        AppIconOption(id: "pixel", name: "8-Bit", group: "Video game", palette: "grape"),
-        AppIconOption(id: "pocket", name: "Pocket", group: "Video game", palette: "volt"),
-        AppIconOption(id: "arcade", name: "Arcade", group: "Video game", palette: "grape"),
-        AppIconOption(id: "loot", name: "Loot", group: "Video game", palette: "gold"),
-        AppIconOption(id: "levelup", name: "Level Up", group: "Video game", palette: "mint"),
-        AppIconOption(id: "mainevent", name: "Main Event", group: "80s wrestling", palette: "rose"),
-        AppIconOption(id: "titlebelt", name: "Title Belt", group: "80s wrestling", palette: "gold"),
-        AppIconOption(id: "grit", name: "Grit", group: "80s wrestling", palette: "rose"),
+        AppIconOption(id: "pixel", name: "8-Bit", group: "Video game", palette: "grape", unlock: .workouts(1)),
+        AppIconOption(id: "pocket", name: "Pocket", group: "Video game", palette: "volt", unlock: .workouts(5)),
+        AppIconOption(id: "arcade", name: "Arcade", group: "Video game", palette: "grape", unlock: .workouts(10)),
+        AppIconOption(id: "loot", name: "Loot", group: "Video game", palette: "gold", unlock: .records(1)),
+        AppIconOption(id: "levelup", name: "Level Up", group: "Video game", palette: "mint", unlock: .workouts(25)),
+        AppIconOption(id: "mainevent", name: "Main Event", group: "80s wrestling", palette: "rose", unlock: .workouts(50)),
+        AppIconOption(id: "titlebelt", name: "Title Belt", group: "80s wrestling", palette: "gold", unlock: .records(10)),
+        AppIconOption(id: "grit", name: "Grit", group: "80s wrestling", palette: "rose", unlock: .streak(4)),
         AppIconOption(id: "studio", name: "Studio", group: "Minimal", palette: "mono"),
         AppIconOption(id: "graphite", name: "Graphite", group: "Minimal", palette: "mono"),
         AppIconOption(id: "ember", name: "Ember", group: "Fitness", palette: "ember"),
@@ -66,7 +82,13 @@ struct IconPicker: View {
     private let columns = [GridItem(.adaptive(minimum: 64, maximum: 80), spacing: 14)]
 
     var body: some View {
+        let totals: Store.TrainingTotals? = store.data.unlockIcons ? store.trainingTotals() : nil
         VStack(alignment: .leading, spacing: 14) {
+            if let totals {
+                Text("\(totals.workouts) workouts · \(totals.records) records · \(totals.streak)-week streak")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(Theme.sub)
+            }
             ForEach(AppIcons.groups, id: \.self) { group in
                 VStack(alignment: .leading, spacing: 8) {
                     Text(group.uppercased())
@@ -75,7 +97,7 @@ struct IconPicker: View {
                         .foregroundStyle(Theme.sub)
                     LazyVGrid(columns: columns, alignment: .leading, spacing: 12) {
                         ForEach(AppIcons.all.filter { $0.group == group }) { option in
-                            cell(option)
+                            cell(option, locked: totals.map { !store.isUnlocked(option, totals: $0) } ?? false)
                         }
                     }
                 }
@@ -105,15 +127,21 @@ struct IconPicker: View {
                 .transition(.opacity.combined(with: .move(edge: .top)))
             }
             if let error {
-                Text(error).font(.caption).foregroundStyle(Theme.warn)
+                Text(error).font(.caption).foregroundStyle(Theme.sub)
             }
+            Toggle("Unlock icons by training", isOn: $store.data.unlockIcons)
+                .font(.system(size: 15))
         }
         .padding(.vertical, 6)
     }
 
-    private func cell(_ option: AppIconOption) -> some View {
+    private func cell(_ option: AppIconOption, locked: Bool) -> some View {
         let selected = option.id == current.id
         return Button {
+            if locked {
+                withAnimation { error = "\(option.name) unlocks at: \(option.unlock?.text ?? "")." }
+                return
+            }
             Task {
                 let failure = await AppIcons.set(option)
                 error = failure
@@ -128,13 +156,23 @@ struct IconPicker: View {
                 Image(option.preview)
                     .resizable()
                     .frame(width: 60, height: 60)
+                    .saturation(locked ? 0 : 1)
+                    .opacity(locked ? 0.45 : 1)
                     .clipShape(RoundedRectangle(cornerRadius: 13.5, style: .continuous))
+                    .overlay {
+                        if locked {
+                            Image(systemName: "lock.fill")
+                                .font(.system(size: 18, weight: .bold))
+                                .foregroundStyle(.white)
+                                .shadow(radius: 3)
+                        }
+                    }
                     .overlay(
                         RoundedRectangle(cornerRadius: 16, style: .continuous)
                             .stroke(selected ? Theme.accent : Color.clear, lineWidth: 2.5)
                             .padding(-3)
                     )
-                Text(option.name)
+                Text(locked ? (option.unlock?.text ?? option.name) : option.name)
                     .font(.system(size: 11, weight: selected ? .bold : .medium))
                     .foregroundStyle(selected ? Theme.accentText : Theme.sub)
                     .lineLimit(1)
@@ -143,7 +181,7 @@ struct IconPicker: View {
             .frame(maxWidth: .infinity)
         }
         .buttonStyle(.plain)
-        .accessibilityLabel("\(option.name) icon")
+        .accessibilityLabel(locked ? "\(option.name) icon, locked. \(option.unlock?.text ?? "")" : "\(option.name) icon")
         .accessibilityAddTraits(selected ? .isSelected : [])
     }
 }

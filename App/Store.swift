@@ -107,6 +107,11 @@ struct AppData: Codable {
     var background: String = "sky"
     var numberStyle: String = "standard"
     var celebrations = true
+    /// "bar" or "ring".
+    var restStyle: String = "bar"
+    var compact = false
+    /// Game icons unlock as you train. Off means every icon is open.
+    var unlockIcons = false
 
     init() {}
 
@@ -133,6 +138,9 @@ struct AppData: Codable {
         background = try c.decodeIfPresent(String.self, forKey: .background) ?? d.background
         numberStyle = try c.decodeIfPresent(String.self, forKey: .numberStyle) ?? d.numberStyle
         celebrations = try c.decodeIfPresent(Bool.self, forKey: .celebrations) ?? d.celebrations
+        restStyle = try c.decodeIfPresent(String.self, forKey: .restStyle) ?? d.restStyle
+        compact = try c.decodeIfPresent(Bool.self, forKey: .compact) ?? d.compact
+        unlockIcons = try c.decodeIfPresent(Bool.self, forKey: .unlockIcons) ?? d.unlockIcons
     }
 }
 
@@ -167,6 +175,8 @@ final class Store: ObservableObject {
             }
         }
     }
+    /// Icons unlocked by the workout just finished, shown on the finish screen.
+    @Published var newUnlocks: [AppIconOption] = []
     /// A record just set mid-workout, shown as a banner with confetti.
     @Published var celebration: Celebration?
     /// Exercises that already celebrated this workout, so it fires once each.
@@ -560,7 +570,18 @@ final class Store: ObservableObject {
         guard !items.isEmpty else { return }
         let entry = HistoryEntry(id: UUID().uuidString, date: s.start, routine: s.routine,
                                  duration: Date().timeIntervalSince(s.start), items: items)
+        var lockedBefore: Set<String> = []
+        if data.unlockIcons {
+            let before = trainingTotals()
+            lockedBefore = Set(AppIcons.all.filter { !isUnlocked($0, totals: before) }.map { $0.id })
+        }
         data.history.insert(entry, at: 0)
+        if lockedBefore.isEmpty {
+            newUnlocks = []
+        } else {
+            let after = trainingTotals()
+            newUnlocks = AppIcons.all.filter { lockedBefore.contains($0.id) && isUnlocked($0, totals: after) }
+        }
         for item in items { data.pendingWeight[item.exerciseID] = nil }
         syncWidget()
         saveNow()
@@ -837,6 +858,29 @@ final class Store: ObservableObject {
                 self.data.notes[id] = value.isEmpty ? nil : value
             }
         )
+    }
+
+    // MARK: Icon unlocks
+
+    struct TrainingTotals {
+        var workouts: Int
+        var records: Int
+        var streak: Int
+    }
+
+    func trainingTotals() -> TrainingTotals {
+        let recordCount = data.history.reduce(0) { $0 + records(for: $1).count }
+        return TrainingTotals(workouts: data.history.count, records: recordCount, streak: weekStreak())
+    }
+
+    func isUnlocked(_ option: AppIconOption, totals: TrainingTotals? = nil) -> Bool {
+        guard data.unlockIcons, let need = option.unlock else { return true }
+        let t = totals ?? trainingTotals()
+        switch need {
+        case .workouts(let n): return t.workouts >= n
+        case .records(let n): return t.records >= n
+        case .streak(let n): return t.streak >= n
+        }
     }
 
     // MARK: Personal records

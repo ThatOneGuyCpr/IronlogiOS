@@ -46,6 +46,18 @@ struct SettingsView: View {
                     IconPicker()
                 }
 
+                Section {
+                    Picker("Rest timer", selection: $store.data.restStyle) {
+                        Text("Bar").tag("bar")
+                        Text("Big ring").tag("ring")
+                    }
+                    Toggle("Compact mode", isOn: $store.data.compact)
+                } header: {
+                    Text("Workout screen")
+                } footer: {
+                    Text("Compact mode tightens the set rows and tucks the form video behind a play button, so more fits on screen.")
+                }
+
                 Section("Goals") {
                     Stepper("Workouts per week: \(store.data.weeklyTarget)", value: $store.data.weeklyTarget, in: 1...7)
                     Toggle("Pair supersets by default", isOn: $store.data.supersetsByDefault)

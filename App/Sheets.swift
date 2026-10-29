@@ -221,6 +221,7 @@ struct FinishSheet: View {
     @Environment(\.dismiss) private var dismiss
     let entry: HistoryEntry
     @State private var appeared = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         let records = store.records(for: entry)
@@ -266,6 +267,35 @@ struct FinishSheet: View {
                     .scaleEffect(appeared || !party ? 1 : 0.92)
                     .opacity(appeared || !party ? 1 : 0)
                 }
+                if !store.newUnlocks.isEmpty {
+                    VStack(alignment: .leading, spacing: 10) {
+                        Label(store.newUnlocks.count == 1 ? "Icon unlocked" : "\(store.newUnlocks.count) icons unlocked", systemImage: "lock.open.fill")
+                            .font(.system(size: 15, weight: .bold))
+                            .foregroundStyle(Theme.accentText)
+                        ForEach(store.newUnlocks) { option in
+                            HStack(spacing: 12) {
+                                Image(option.preview)
+                                    .resizable()
+                                    .frame(width: 44, height: 44)
+                                    .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                                Text(option.name)
+                                    .font(.system(size: 15, weight: .semibold))
+                                    .foregroundStyle(Theme.ink)
+                                Spacer()
+                                Button("Use it") {
+                                    Task { _ = await AppIcons.set(option) }
+                                }
+                                .buttonStyle(.glassProminent)
+                                .tint(Theme.accent)
+                            }
+                        }
+                    }
+                    .padding(16)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(Theme.promptBg, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+                    .overlay(RoundedRectangle(cornerRadius: 20, style: .continuous).stroke(Theme.promptBorder, lineWidth: 1))
+                    .padding(.horizontal, 24)
+                }
                 if store.data.healthViaShortcut, let url = store.healthShortcutURL(minutes: entry.minutes) {
                     Button {
                         openURL(url)
@@ -283,7 +313,7 @@ struct FinishSheet: View {
         }
         .background { SkyBackground() }
         .overlay {
-            if party && !records.isEmpty {
+            if party && !records.isEmpty && !reduceMotion {
                 ConfettiView(count: 120, duration: 3.5).ignoresSafeArea()
             }
         }
@@ -291,6 +321,7 @@ struct FinishSheet: View {
         .onAppear {
             withAnimation(.spring(duration: 0.5, bounce: 0.35).delay(0.35)) { appeared = true }
         }
+        .onDisappear { store.newUnlocks = [] }
     }
 
     private func stat(_ value: Double, _ label: String, delay: Double) -> some View {
