@@ -8,6 +8,7 @@ struct SettingsView: View {
     @State private var message: String?
     @State private var exportURL: URL?
     @State private var confirmErase = false
+    @State private var showPlans = false
 
     var body: some View {
         NavigationStack {
@@ -59,7 +60,14 @@ struct SettingsView: View {
                 }
 
                 Section("Goals") {
-                    Stepper("Workouts per week: \(store.data.weeklyTarget)", value: $store.data.weeklyTarget, in: 1...7)
+                    Button {
+                        showPlans = true
+                    } label: {
+                        LabeledContent("Plan") {
+                            Text(store.data.plan.name).foregroundStyle(.secondary)
+                        }
+                    }
+                    .foregroundStyle(Theme.ink)
                     Toggle("Pair supersets by default", isOn: $store.data.supersetsByDefault)
                 }
 
@@ -152,6 +160,7 @@ struct SettingsView: View {
             } message: {
                 Text(message ?? "")
             }
+            .sheet(isPresented: $showPlans) { ProgramsView() }
             .confirmationDialog("Erase every workout and setting?", isPresented: $confirmErase, titleVisibility: .visible) {
                 Button("Erase", role: .destructive) { store.eraseAll() }
             }
@@ -193,7 +202,7 @@ struct ExerciseListView: View {
                 HStack {
                     VStack(alignment: .leading, spacing: 2) {
                         Text(ex.name).foregroundStyle(Color.primary)
-                        Text(store.prescription(ex.id).summary(for: ex))
+                        Text(store.basePrescription(ex.id).summary(for: ex))
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }

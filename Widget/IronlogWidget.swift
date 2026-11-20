@@ -128,19 +128,40 @@ struct WeekWidgetView: View {
         let count = snap.weekCount(entry.date)
         switch family {
         case .accessoryCircular:
-            Gauge(value: Double(min(count, snap.weeklyTarget)), in: 0...Double(max(1, snap.weeklyTarget))) {
-                Image(systemName: "dumbbell.fill")
-            } currentValueLabel: {
-                Text("\(count)/\(snap.weeklyTarget)")
+            if snap.weeklyTarget <= 6 {
+                ZStack {
+                    AccessoryWidgetBackground()
+                    SegmentedRing(count: count, target: snap.weeklyTarget, lineWidth: 5, on: .primary, off: .primary.opacity(0.25))
+                        .padding(5)
+                        .widgetAccentable()
+                    Text("\(count)/\(snap.weeklyTarget)")
+                        .font(.system(size: 15, weight: .bold))
+                }
+            } else {
+                Gauge(value: Double(min(count, snap.weeklyTarget)), in: 0...Double(max(1, snap.weeklyTarget))) {
+                    Image(systemName: "dumbbell.fill")
+                } currentValueLabel: {
+                    Text("\(count)/\(snap.weeklyTarget)")
+                }
+                .gaugeStyle(.accessoryCircularCapacity)
+                .widgetAccentable()
             }
-            .gaugeStyle(.accessoryCircularCapacity)
-            .widgetAccentable()
         case .accessoryInline:
-            Text("\(count) of \(snap.weeklyTarget) this week · \(snap.next.title) next")
+            if snap.isRestDay(entry.date) {
+                Text("Rest day · \(snap.next.shortTitle) \(snap.nextPlannedDate(after: entry.date)?.formatted(.dateTime.weekday(.abbreviated)) ?? "next")")
+            } else {
+                Text("\(count) of \(snap.weeklyTarget) this week · \(snap.next.title) next")
+            }
         case .systemLarge:
             LargeOverview(entry: entry)
         default:
-            MediumWeek(entry: entry)
+            if snap.weeklyTarget <= 2 {
+                TwoDayMedium(entry: entry)
+            } else if snap.weeklyTarget <= 3 {
+                SlotsMedium(entry: entry)
+            } else {
+                MediumWeek(entry: entry)
+            }
         }
     }
 }
@@ -167,10 +188,12 @@ private struct MediumWeek: View {
                 Spacer(minLength: 0)
                 HStack(spacing: 4) {
                     ForEach(snap.days(entry.date)) { d in
+                        let size: CGFloat = d.code != nil || d.planned ? 12 : 6
                         Circle()
                             .fill(d.code != nil ? WP.accent : WP.faint)
+                            .frame(width: size, height: size)
+                            .overlay(Circle().stroke(d.isToday && d.code == nil && d.planned ? WP.accent : Color.clear, lineWidth: 1.5))
                             .frame(width: 12, height: 12)
-                            .overlay(Circle().stroke(d.isToday && d.code == nil ? WP.accent : Color.clear, lineWidth: 1.5))
                     }
                 }
             }
@@ -231,6 +254,189 @@ private struct WeekRing: View {
     }
 }
 
+/// Ring split into one arc per planned workout.
+private struct SegmentedRing: View {
+    let count: Int
+    let target: Int
+    var lineWidth: CGFloat = 9
+    var on: Color
+    var off: Color
+
+    var body: some View {
+        let n = max(1, target)
+        let gap = n > 1 ? 0.035 : 0
+        ZStack {
+            ForEach(0..<n, id: \.self) { i in
+                let start = Double(i) / Double(n) + gap / 2
+                let end = Double(i + 1) / Double(n) - gap / 2
+                Circle()
+                    .trim(from: start, to: max(start, end))
+                    .stroke(i < count ? on : off, style: StrokeStyle(lineWidth: lineWidth, lineCap: .round))
+                    .rotationEffect(.degrees(-90))
+            }
+        }
+    }
+}
+
+private struct SlotCircle: View {
+    let slot: WidgetSnapshot.PlanSlot
+
+    var body: some View {
+        VStack(spacing: 3) {
+            ZStack {
+                switch slot.state {
+                case .done:
+                    Circle().fill(WP.accent)
+                case .today:
+                    Circle().strokeBorder(WP.accent, lineWidth: 2.5)
+                case .upcoming:
+                    Circle().strokeBorder(WP.sub.opacity(0.45), style: StrokeStyle(lineWidth: 1.5, dash: [3, 2.5]))
+                }
+                Text(slot.glyph)
+                    .font(.system(size: 11, weight: .heavy))
+                    .foregroundStyle(slot.state == .done ? WP.accentInk : (slot.state == .today ? WP.accent : WP.sub))
+            }
+            .frame(width: 32, height: 32)
+            Text(slot.label.isEmpty ? " " : slot.label)
+                .font(.system(size: 10, weight: slot.state == .today ? .heavy : .bold))
+                .foregroundStyle(slot.state == .today ? WP.accent : WP.sub)
+        }
+    }
+}
+
+/// Three days a week or fewer: one slot per workout, plus today or the next one.
+private struct SlotsMedium: View {
+    let entry: SnapEntry
+
+    var body: some View {
+        let snap = entry.snap
+        let count = snap.weekCount(entry.date)
+        let rest = snap.isRestDay(entry.date)
+        HStack(spacing: 14) {
+            VStack(alignment: .leading, spacing: 0) {
+                Caption("THIS WEEK")
+                HStack(alignment: .firstTextBaseline, spacing: 3) {
+                    Text("\(count)")
+                        .font(.system(size: 46, weight: .heavy))
+                        .foregroundStyle(WP.accent)
+                    Text("/ \(snap.weeklyTarget)")
+                        .font(.system(size: 17, weight: .bold))
+                        .foregroundStyle(WP.sub)
+                }
+                Spacer(minLength: 0)
+                HStack(spacing: 8) {
+                    ForEach(snap.planSlots(entry.date)) { SlotCircle(slot: $0) }
+                }
+            }
+            .frame(width: 128, alignment: .leading)
+
+            Rectangle().fill(WP.rule).frame(width: 1)
+
+            VStack(alignment: .leading, spacing: 0) {
+                if rest {
+                    Caption("REST DAY")
+                    Text("Next: \(snap.next.title)")
+                        .font(.system(size: 18, weight: .heavy))
+                        .foregroundStyle(WP.ink)
+                        .lineLimit(2)
+                        .minimumScaleFactor(0.8)
+                        .padding(.top, 4)
+                    Text(snap.nextPlannedDate(after: entry.date)?.formatted(.dateTime.weekday(.wide)) ?? "")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(WP.sub)
+                    Spacer(minLength: 0)
+                    if let last = snap.last {
+                        Text("Last: \(last.routine.title), \(WidgetSnapshot.relativeDay(last.date, now: entry.date).lowercased())")
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundStyle(WP.sub)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.8)
+                    }
+                } else {
+                    Caption(snap.trainedToday(entry.date) ? "UP NEXT" : "TODAY")
+                    Text(snap.next.title)
+                        .font(.system(size: 18, weight: .heavy))
+                        .foregroundStyle(WP.ink)
+                        .lineLimit(2)
+                        .minimumScaleFactor(0.8)
+                        .padding(.top, 4)
+                    Text(snap.nextCount.counted("exercise"))
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(WP.sub)
+                    Spacer(minLength: 0)
+                    Link(destination: Links.start) {
+                        StartPill(height: 34)
+                    }
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+    }
+}
+
+/// Two days a week: a tile per workout.
+private struct TwoDayMedium: View {
+    let entry: SnapEntry
+
+    var body: some View {
+        let snap = entry.snap
+        let slots = snap.planSlots(entry.date)
+        let weekDone = snap.workouts
+            .filter { WidgetSnapshot.calendar.isDate($0.date, equalTo: entry.date, toGranularity: .weekOfYear) }
+            .sorted { $0.date < $1.date }
+        let ups = snap.upcoming ?? [snap.next]
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                Caption("THIS WEEK")
+                Spacer()
+                Text("\(min(weekDone.count, snap.weeklyTarget)) of \(snap.weeklyTarget)")
+                    .font(.system(size: 13, weight: .heavy))
+                    .foregroundStyle(WP.accent)
+            }
+            HStack(spacing: 10) {
+                ForEach(slots) { slot in
+                    let workout: WidgetSnapshot.Workout? = slot.state == .done && slot.id < weekDone.count ? weekDone[slot.id] : nil
+                    let k = max(0, slot.id - weekDone.count)
+                    let title = workout?.routine.title ?? (ups.isEmpty ? snap.next.title : ups[k % ups.count].title)
+                    tile(slot, title: title, workout: workout)
+                }
+            }
+        }
+        .widgetURL(Links.start)
+    }
+
+    private func tile(_ slot: WidgetSnapshot.PlanSlot, title: String, workout: WidgetSnapshot.Workout?) -> some View {
+        let isDone = slot.state == .done
+        let head = (slot.label.isEmpty ? "NEXT" : slot.label.uppercased()) + (isDone ? " · DONE" : slot.state == .today ? " · TODAY" : "")
+        return VStack(alignment: .leading, spacing: 3) {
+            Text(head)
+                .font(.system(size: 10, weight: .heavy))
+                .foregroundStyle(isDone ? WP.accentInk.opacity(0.85) : WP.sub)
+            Text(title)
+                .font(.system(size: 15, weight: .heavy))
+                .foregroundStyle(isDone ? WP.accentInk : WP.ink)
+                .lineLimit(2)
+                .minimumScaleFactor(0.8)
+            Spacer(minLength: 0)
+            Text(workout.map { "\($0.minutes) min · " + $0.sets.counted("set") } ?? "Up next")
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundStyle(isDone ? WP.accentInk.opacity(0.9) : WP.sub)
+                .lineLimit(1)
+        }
+        .padding(10)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+        .background {
+            if isDone {
+                RoundedRectangle(cornerRadius: 14, style: .continuous).fill(WP.accent)
+            } else {
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .strokeBorder(slot.state == .today ? WP.accent : WP.sub.opacity(0.4),
+                                  style: StrokeStyle(lineWidth: slot.state == .today ? 2 : 1.5, dash: slot.state == .today ? [] : [4, 3]))
+            }
+        }
+    }
+}
+
 private struct LargeOverview: View {
     let entry: SnapEntry
 
@@ -240,7 +446,17 @@ private struct LargeOverview: View {
         let left = max(0, snap.weeklyTarget - count)
         VStack(alignment: .leading, spacing: 12) {
             HStack(spacing: 14) {
-                WeekRing(count: count, target: snap.weeklyTarget)
+                if snap.weeklyTarget <= 6 {
+                    ZStack {
+                        SegmentedRing(count: count, target: snap.weeklyTarget, lineWidth: 9, on: WP.accent, off: WP.faint)
+                        Text("\(count)/\(snap.weeklyTarget)")
+                            .font(.system(size: 20, weight: .heavy))
+                            .foregroundStyle(WP.ink)
+                    }
+                    .frame(width: 74, height: 74)
+                } else {
+                    WeekRing(count: count, target: snap.weeklyTarget)
+                }
                 VStack(alignment: .leading, spacing: 2) {
                     Caption("THIS WEEK")
                     Text(left == 0 ? "Week done" : left == 1 ? "One to go" : "\(left) to go")
@@ -332,6 +548,33 @@ struct NextWorkoutView: View {
     var body: some View {
         let snap = entry.snap
         switch family {
+        case .accessoryRectangular where snap.isRestDay(entry.date):
+            VStack(alignment: .leading, spacing: 1) {
+                Text("Rest day").font(.headline).widgetAccentable()
+                Text(snap.next.title).font(.caption)
+                Text(snap.nextPlannedDate(after: entry.date)?.formatted(.dateTime.weekday(.wide)) ?? "Next time")
+                    .font(.caption2)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+        case .systemSmall where snap.isRestDay(entry.date):
+            VStack(alignment: .leading, spacing: 0) {
+                Image(systemName: "moon.fill")
+                    .font(.system(size: 20, weight: .semibold))
+                    .foregroundStyle(WP.sub)
+                Text("Rest day")
+                    .font(.system(size: 22, weight: .heavy))
+                    .foregroundStyle(WP.ink)
+                    .padding(.top, 6)
+                Spacer(minLength: 0)
+                Caption("NEXT · " + (snap.nextPlannedDate(after: entry.date)?.formatted(.dateTime.weekday(.abbreviated)).uppercased() ?? ""))
+                Text(snap.next.title)
+                    .font(.system(size: 15, weight: .bold))
+                    .foregroundStyle(WP.ink)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .widgetURL(Links.start)
         case .accessoryRectangular:
             VStack(alignment: .leading, spacing: 1) {
                 Text("Up next").font(.caption2)

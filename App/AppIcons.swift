@@ -46,6 +46,11 @@ enum AppIcons {
         AppIconOption(id: "graphite", name: "Graphite", group: "Minimal", palette: "mono"),
         AppIconOption(id: "ember", name: "Ember", group: "Fitness", palette: "ember"),
         AppIconOption(id: "blackout", name: "Blackout", group: "Fitness", palette: "volt"),
+        AppIconOption(id: "plate", name: "Plate", group: "Picks", palette: "glacier"),
+        AppIconOption(id: "blueprint", name: "Blueprint", group: "Picks", palette: "glacier"),
+        AppIconOption(id: "skeuo", name: "Skeuo", group: "Iconic eras", palette: "glacier"),
+        AppIconOption(id: "onebit", name: "1-Bit", group: "Iconic eras", palette: "mono"),
+        AppIconOption(id: "aero", name: "Aero", group: "Iconic eras", palette: "glacier"),
     ]
 
     static var groups: [String] {

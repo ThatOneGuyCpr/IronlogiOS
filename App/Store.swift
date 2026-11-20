@@ -114,6 +114,8 @@ struct AppData: Codable {
     var unlockIcons = false
     /// Equipment this save has already seen. New equipment added in an update starts out open.
     var knownEquipment: [String] = Equipment.allCases.map { $0.rawValue }
+    /// Program, days per week, set days and muscle focus.
+    var plan = Plan()
 
     init() {}
 
@@ -127,6 +129,12 @@ struct AppData: Codable {
             ?? ["dumbbells", "smith", "bench", "cable", "lat", "legPress", "legMachine", "abMachine"]
         for eq in Equipment.allCases where !known.contains(eq.rawValue) { open.insert(eq) }
         knownEquipment = Equipment.allCases.map { $0.rawValue }
+        if let p = try? c.decodeIfPresent(Plan.self, forKey: .plan) {
+            plan = p
+        } else {
+            // Saves from before plans: the original four-day upper/lower, no set days.
+            plan = Plan(program: .upperLower, days: 4, weekdays: nil)
+        }
         hidden = try c.decodeIfPresent(Set<String>.self, forKey: .hidden) ?? d.hidden
         history = try c.decodeIfPresent([HistoryEntry].self, forKey: .history) ?? d.history
         session = try? c.decodeIfPresent(Session.self, forKey: .session)
@@ -138,6 +146,7 @@ struct AppData: Codable {
         snoozed = try c.decodeIfPresent([String: Int].self, forKey: .snoozed) ?? d.snoozed
         appearance = try c.decodeIfPresent(String.self, forKey: .appearance) ?? d.appearance
         weeklyTarget = try c.decodeIfPresent(Int.self, forKey: .weeklyTarget) ?? d.weeklyTarget
+        weeklyTarget = plan.days
         notes = try c.decodeIfPresent([String: String].self, forKey: .notes) ?? d.notes
         supersetsByDefault = try c.decodeIfPresent(Bool.self, forKey: .supersetsByDefault) ?? d.supersetsByDefault
         videoOverrides = try c.decodeIfPresent([String: String].self, forKey: .videoOverrides) ?? d.videoOverrides
@@ -272,9 +281,32 @@ final class Store: ObservableObject {
 
     // MARK: Lookups
 
-    func prescription(_ id: String) -> Prescription {
+    /// The exercise's own sets, reps and rest: your edits or the default. Used by the editor.
+    func basePrescription(_ id: String) -> Prescription {
         if let custom = data.overrides[id] { return custom }
         return Library.byID[id]?.preset ?? Preset.isolation
+    }
+
+    /// What to actually do today: the base, adjusted by the plan's focus and program.
+    /// `routine` defaults to the workout in progress.
+    func prescription(_ id: String, routine: RoutineID? = nil) -> Prescription {
+        var p = basePrescription(id)
+        let plan = data.plan
+        p.sets = plan.sets(p.sets, for: Library.muscleByID[id])
+        if plan.program.powerDays, let r = routine ?? data.session?.routine, r.variant == "A",
+           !isCustom(id), let ex = Library.byID[id], !ex.timed, ex.preset.rest >= 90,
+           let slot = r.slots.firstIndex(where: { $0.candidates.contains(id) }), slot < 2 {
+            p.low = 4
+            p.high = 6
+            p.rest = max(p.rest, 120)
+        }
+        return p
+    }
+
+    /// True when the plan marks this exercise's muscle to grow.
+    func isFocus(_ id: String) -> Bool {
+        guard let m = Library.muscleByID[id] else { return false }
+        return data.plan.focus(for: m) == .grow
     }
 
     func isCustom(_ id: String) -> Bool { data.overrides[id] != nil }
@@ -308,8 +340,11 @@ final class Store: ObservableObject {
         return missing.isEmpty ? "" : "Taken: " + missing.joined(separator: ", ")
     }
 
-    var nextRoutine: RoutineID { RoutineID.next(after: data.history.first?.routine) }
-    var todayRoutine: RoutineID { data.selectedRoutine ?? nextRoutine }
+    var nextRoutine: RoutineID { data.plan.next(after: data.history.first?.routine) }
+    var todayRoutine: RoutineID {
+        if let s = data.selectedRoutine, data.plan.rotation.contains(s) { return s }
+        return nextRoutine
+    }
 
     func plan(_ routine: RoutineID) -> [Exercise?] {
         Generator.plan(for: routine, open: data.open, hidden: data.hidden)
@@ -354,8 +389,8 @@ final class Store: ObservableObject {
         w == w.rounded() ? String(Int(w)) : String(format: "%.1f", w)
     }
 
-    func buildSets(_ id: String) -> [SetLog] {
-        let p = prescription(id)
+    func buildSets(_ id: String, routine: RoutineID? = nil) -> [SetLog] {
+        let p = prescription(id, routine: routine)
         let sug = suggestion(id)
         return (0..<max(1, p.sets)).map { i in
             var s = SetLog()
@@ -384,7 +419,7 @@ final class Store: ObservableObject {
         let routine = todayRoutine
         let slots = routine.slots
         let items = plan(routine).enumerated().map { i, ex in
-            ItemLog(slot: i, exerciseID: ex?.id, sets: ex.map { buildSets($0.id) } ?? [],
+            ItemLog(slot: i, exerciseID: ex?.id, sets: ex.map { buildSets($0.id, routine: routine) } ?? [],
                     superset: data.supersetsByDefault && slots[i].pairNext && i + 1 < slots.count)
         }
         data.session = Session(routine: routine, start: Date(), items: items)
@@ -624,8 +659,11 @@ final class Store: ObservableObject {
             WidgetSnapshot.Workout(date: $0.date, routine: $0.routine, minutes: $0.minutes,
                                    sets: $0.setCount, volume: $0.volume)
         }
-        snap.weeklyTarget = data.weeklyTarget
+        snap.weeklyTarget = data.plan.days
         snap.next = nextRoutine
+        snap.plannedWeekdays = data.plan.weekdays
+        snap.upcoming = data.plan.upcoming(from: nextRoutine, count: data.plan.days)
+        snap.planName = data.plan.name
         let picks = plan(nextRoutine).compactMap { $0 }
         snap.nextFirst = picks.first?.name
         snap.nextCount = picks.count
@@ -691,6 +729,8 @@ final class Store: ObservableObject {
         let routine: RoutineID?
         let isToday: Bool
         let isFuture: Bool
+        /// A training day in the plan (always true when there are no set days).
+        let planned: Bool
 
         var done: Bool { routine != nil }
     }
@@ -704,13 +744,67 @@ final class Store: ObservableObject {
             // History is newest first, so this is the day's latest workout.
             let routine = data.history.first { cal.isDate($0.date, inSameDayAs: day) }?.routine
             let today = cal.isDateInToday(day)
-            return DayDot(id: i, letter: letters[i], routine: routine, isToday: today, isFuture: !today && day > Date())
+            let planned = data.plan.isPlanned(weekday: cal.component(.weekday, from: day))
+            return DayDot(id: i, letter: letters[i], routine: routine, isToday: today, isFuture: !today && day > Date(), planned: planned)
         }
+    }
+
+    // MARK: Plan
+
+    /// Today is an off day in a plan with set days, and nothing's been logged today.
+    var isRestDay: Bool {
+        let cal = weekCalendar
+        guard data.plan.isFixed else { return false }
+        if data.history.contains(where: { cal.isDateInToday($0.date) }) { return false }
+        return !data.plan.isPlanned(weekday: cal.component(.weekday, from: Date()))
+    }
+
+    /// The next planned training day after today.
+    func nextPlannedDate(after date: Date = Date()) -> Date? {
+        let cal = weekCalendar
+        for k in 1...7 {
+            guard let d = cal.date(byAdding: .day, value: k, to: date) else { continue }
+            if data.plan.isPlanned(weekday: cal.component(.weekday, from: d)) { return d }
+        }
+        return nil
+    }
+
+    /// Working sets per muscle in one week of a plan, using what's open now.
+    func weeklySets(for plan: Plan) -> [Muscle: Int] {
+        var out: [Muscle: Int] = [:]
+        for routine in plan.rotation {
+            for ex in self.plan(routine).compactMap({ $0 }) {
+                guard let m = Library.muscleByID[ex.id] else { continue }
+                out[m, default: 0] += plan.sets(basePrescription(ex.id).sets, for: m)
+            }
+        }
+        return out
+    }
+
+    /// Sets done this week per muscle.
+    func setsThisWeek() -> [Muscle: Int] {
+        var out: [Muscle: Int] = [:]
+        for entry in entriesThisWeek() {
+            for item in entry.items {
+                guard let m = Library.muscleByID[item.exerciseID] else { continue }
+                out[m, default: 0] += item.sets.count
+            }
+        }
+        return out
+    }
+
+    func applyPlan(_ plan: Plan) {
+        var p = plan
+        p.days = max(1, min(7, p.days))
+        data.plan = p
+        data.weeklyTarget = p.days
+        data.selectedRoutine = nil
+        syncWidget()
     }
 
     func estimatedMinutes(_ routine: RoutineID) -> Int {
         let seconds = plan(routine).compactMap { $0 }.reduce(0) { total, ex in
-            let p = prescription(ex.id)
+            let p = prescription(ex.id, routine: routine)
             return total + p.sets * (45 + p.rest)
         }
         return max(5, Int((Double(seconds) / 300).rounded()) * 5)

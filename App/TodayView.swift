@@ -14,15 +14,25 @@ struct TodayView: View {
     @EnvironmentObject private var store: Store
     @EnvironmentObject private var rest: RestController
     @State private var showEquipment = false
+    @State private var showPlans = false
+    @State private var trainAnyway = false
+
+    private var resting: Bool { store.isRestDay && !trainAnyway }
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
                 header
-                heroCard
-                weekCard
-                routinePicker
-                lineupCard
+                if resting {
+                    restCard
+                    weekCard
+                    weekSoFar
+                } else {
+                    heroCard
+                    weekCard
+                    routinePicker
+                    lineupCard
+                }
             }
             .padding(.horizontal, 20)
             .padding(.top, 8)
@@ -32,6 +42,9 @@ struct TodayView: View {
         .sheet(isPresented: $showEquipment) {
             EquipmentSheet()
                 .presentationDetents([.medium, .large])
+        }
+        .sheet(isPresented: $showPlans) {
+            ProgramsView()
         }
     }
 
@@ -48,6 +61,23 @@ struct TodayView: View {
                     .foregroundStyle(Theme.ink)
             }
             Spacer()
+            Button {
+                showPlans = true
+            } label: {
+                HStack(spacing: 5) {
+                    Text(store.data.plan.name)
+                        .font(.system(size: 13, weight: .bold))
+                        .lineLimit(1)
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 10, weight: .heavy))
+                        .foregroundStyle(Theme.sub)
+                }
+                .foregroundStyle(Theme.ink)
+                .padding(.horizontal, 12)
+                .frame(height: 36)
+            }
+            .buttonStyle(.glass)
+            .accessibilityLabel("Plan: \(store.data.plan.name). Change plan")
             Button {
                 showEquipment = true
             } label: {
@@ -110,6 +140,86 @@ struct TodayView: View {
         .glacierCard(radius: 28, padding: 20)
     }
 
+    // MARK: Rest day
+
+    private var restCard: some View {
+        let next = store.nextRoutine
+        let day = store.nextPlannedDate().map { $0.formatted(.dateTime.weekday(.wide)) } ?? "next time"
+        return VStack(alignment: .leading, spacing: 14) {
+            Pill(text: "REST DAY", fill: Theme.chip, ink: Theme.sub)
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Recover today")
+                    .font(.system(size: 32, weight: .heavy))
+                    .foregroundStyle(Theme.ink)
+                (Text("Next up is ") + Text("\(next.title) on \(day)").bold().foregroundStyle(Theme.ink) + Text("."))
+                    .font(.system(size: 15))
+                    .foregroundStyle(Theme.sub)
+            }
+            HStack(spacing: 12) {
+                Text(next.glyph)
+                    .font(.system(size: 12, weight: .heavy))
+                    .foregroundStyle(Theme.sub)
+                    .frame(width: 40, height: 40)
+                    .overlay(Circle().strokeBorder(Theme.sub.opacity(0.4), style: StrokeStyle(lineWidth: 2, dash: [4, 3])))
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(next.title).font(.system(size: 15, weight: .bold)).foregroundStyle(Theme.ink)
+                    Text(store.plan(next).compactMap { $0 }.count.counted("exercise") + " · about \(store.estimatedMinutes(next)) min")
+                        .font(.system(size: 12))
+                        .foregroundStyle(Theme.sub)
+                }
+                Spacer(minLength: 0)
+            }
+            .padding(12)
+            .background(Theme.field, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+            Button("Train anyway") {
+                withAnimation(.snappy) { trainAnyway = true }
+            }
+            .buttonStyle(OutlineButtonStyle())
+        }
+        .glacierCard(radius: 28, padding: 20)
+    }
+
+    private var weekSoFar: some View {
+        let planned = store.weeklySets(for: store.data.plan)
+        let done = store.setsThisWeek()
+        let muscles = Muscle.allCases.filter { (planned[$0] ?? 0) > 0 }
+        return VStack(alignment: .leading, spacing: 10) {
+            HStack(alignment: .firstTextBaseline) {
+                SectionTitle("This week so far")
+                Spacer()
+                Text("sets done / planned")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(Theme.sub)
+            }
+            LazyVGrid(columns: [GridItem(.adaptive(minimum: 96), spacing: 8)], spacing: 8) {
+                ForEach(muscles) { m in
+                    let d = done[m] ?? 0
+                    let p = max(1, planned[m] ?? 1)
+                    VStack(alignment: .leading, spacing: 5) {
+                        Text(m.name)
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundStyle(Theme.sub)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.8)
+                        (Text("\(d)").font(Theme.num(15)) + Text(" / \(p)").font(.system(size: 12, weight: .semibold)).foregroundStyle(Theme.sub))
+                            .foregroundStyle(Theme.ink)
+                        GeometryReader { geo in
+                            ZStack(alignment: .leading) {
+                                Capsule().fill(Theme.faint)
+                                Capsule().fill(Theme.accent).frame(width: geo.size.width * min(1, CGFloat(d) / CGFloat(p)))
+                            }
+                        }
+                        .frame(height: 4)
+                    }
+                    .padding(10)
+                    .background(Theme.field, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                    .accessibilityElement(children: .combine)
+                }
+            }
+        }
+        .glacierCard(padding: 16)
+    }
+
     private func meta(_ icon: String, _ text: String) -> some View {
         HStack(spacing: 5) {
             Image(systemName: icon).font(.system(size: 12, weight: .bold))
@@ -132,7 +242,7 @@ struct TodayView: View {
             HStack(alignment: .firstTextBaseline) {
                 SectionTitle("This week")
                 Spacer()
-                Text("\(done) of \(store.data.weeklyTarget) done")
+                Text("\(done) of \(store.data.plan.days) done")
                     .contentTransition(.numericText(value: Double(done)))
                     .font(.system(size: 13, weight: .semibold))
                     .foregroundStyle(Theme.sub)
@@ -141,9 +251,10 @@ struct TodayView: View {
                 ForEach(store.weekDays()) { day in
                     VStack(spacing: 6) {
                         Text(day.letter)
-                            .font(.system(size: 12, weight: .semibold))
-                            .foregroundStyle(Theme.sub)
+                            .font(.system(size: 12, weight: day.planned || day.done ? .semibold : .medium))
+                            .foregroundStyle(day.planned || day.done ? Theme.sub : Theme.sub.opacity(0.6))
                         dayDot(day)
+                            .frame(height: 32)
                     }
                     .frame(maxWidth: .infinity)
                 }
@@ -158,21 +269,25 @@ struct TodayView: View {
             Circle()
                 .fill(Theme.accent)
                 .frame(width: 32, height: 32)
-                .overlay(
-                    HStack(spacing: 0) {
-                        Image(systemName: routine.isUpper ? "arrow.up" : "arrow.down")
-                            .font(.system(size: 10, weight: .black))
-                        Text(routine.variant)
-                            .font(.system(size: 12, weight: .heavy))
-                    }
-                    .foregroundStyle(Theme.accentInk)
-                )
+                .overlay(RoutineBadge(routine: routine).foregroundStyle(Theme.accentInk))
                 .accessibilityElement()
                 .accessibilityLabel(routine.title)
+        } else if !day.planned {
+            // Off day in a plan with set days.
+            Circle()
+                .strokeBorder(day.isToday ? Theme.accent : Color.clear, lineWidth: 2)
+                .background(Circle().fill(day.isToday ? Color.clear : Theme.faint))
+                .frame(width: day.isToday ? 12 : 7, height: day.isToday ? 12 : 7)
+                .accessibilityLabel(day.isToday ? "Today, rest day" : "Rest day")
         } else if day.isToday {
             Circle()
                 .strokeBorder(Theme.accent, lineWidth: 2)
                 .frame(width: 32, height: 32)
+        } else if day.isFuture && store.data.plan.isFixed {
+            Circle()
+                .strokeBorder(Theme.sub.opacity(0.4), style: StrokeStyle(lineWidth: 1.5, dash: [3, 3]))
+                .frame(width: 32, height: 32)
+                .accessibilityLabel("Planned")
         } else {
             Circle()
                 .fill(Theme.faint)
@@ -184,14 +299,32 @@ struct TodayView: View {
 
     private var routinePicker: some View {
         let selected = store.todayRoutine
-        return HStack(spacing: 6) {
-            ForEach(RoutineID.cycle) { r in
+        var seen = Set<RoutineID>()
+        let options = store.data.plan.rotation.filter { seen.insert($0).inserted }
+        return Group {
+            if options.count > 4 {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    pickerRow(options, selected: selected, fixedWidth: true)
+                }
+            } else {
+                pickerRow(options, selected: selected, fixedWidth: false)
+            }
+        }
+        .padding(5)
+        .background(Theme.card, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).stroke(Theme.cardBorder, lineWidth: 1))
+    }
+
+    private func pickerRow(_ options: [RoutineID], selected: RoutineID, fixedWidth: Bool) -> some View {
+        HStack(spacing: 6) {
+            ForEach(options) { r in
                 Button {
                     withAnimation(.snappy) { store.data.selectedRoutine = r }
                 } label: {
-                    Text(r.title)
+                    Text(r.shortTitle)
                         .font(.system(size: 13, weight: .bold))
-                        .frame(maxWidth: .infinity, minHeight: 40)
+                        .padding(.horizontal, fixedWidth ? 14 : 0)
+                        .frame(maxWidth: fixedWidth ? nil : .infinity, minHeight: 40)
                         .background(r == selected ? Theme.accent : Color.clear, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
                         .foregroundStyle(r == selected ? Theme.accentInk : Theme.sub)
                 }
@@ -199,9 +332,6 @@ struct TodayView: View {
                 .accessibilityAddTraits(r == selected ? .isSelected : [])
             }
         }
-        .padding(5)
-        .background(Theme.card, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).stroke(Theme.cardBorder, lineWidth: 1))
     }
 
     // MARK: Lineup
@@ -221,7 +351,7 @@ struct TodayView: View {
             .padding(.top, 16)
             .padding(.bottom, 6)
             ForEach(Array(routine.slots.enumerated()), id: \.offset) { i, slot in
-                LineupRow(index: i + 1, slot: slot, exercise: picks[i])
+                LineupRow(index: i + 1, slot: slot, exercise: picks[i], routine: routine)
             }
         }
         .glacierCard(padding: 0)
@@ -233,6 +363,7 @@ private struct LineupRow: View {
     let index: Int
     let slot: Slot
     let exercise: Exercise?
+    let routine: RoutineID
     @State private var showClip = false
 
     var body: some View {
@@ -243,11 +374,22 @@ private struct LineupRow: View {
                 .background(Theme.accentSoft, in: RoundedRectangle(cornerRadius: 9, style: .continuous))
                 .foregroundStyle(Theme.accentText)
             VStack(alignment: .leading, spacing: 2) {
-                Text(exercise?.name ?? "Nothing open for \(slot.label.lowercased())")
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundStyle(exercise == nil ? Theme.sub : Theme.ink)
+                HStack(spacing: 6) {
+                    Text(exercise?.name ?? "Nothing open for \(slot.label.lowercased())")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundStyle(exercise == nil ? Theme.sub : Theme.ink)
+                    if let ex = exercise, store.isFocus(ex.id) {
+                        Text("FOCUS")
+                            .font(.system(size: 9, weight: .heavy))
+                            .tracking(0.6)
+                            .padding(.horizontal, 5)
+                            .padding(.vertical, 3)
+                            .background(Theme.accent, in: RoundedRectangle(cornerRadius: 5, style: .continuous))
+                            .foregroundStyle(Theme.accentInk)
+                    }
+                }
                 if let ex = exercise {
-                    Text(store.prescription(ex.id).short(for: ex) + " rest")
+                    Text(store.prescription(ex.id, routine: routine).short(for: ex) + " rest")
                         .font(.system(size: 13))
                         .foregroundStyle(Theme.sub)
                 }
@@ -304,6 +446,22 @@ struct EquipmentChips: View {
                 }
                 .buttonStyle(.plain)
             }
+        }
+    }
+}
+
+/// Arrow plus letter (↑A, ↕B) or a short tag (Pu, Pl, Lg, Ar) for a routine.
+struct RoutineBadge: View {
+    let routine: RoutineID
+
+    var body: some View {
+        HStack(spacing: 0) {
+            if let arrow = routine.arrowSymbol {
+                Image(systemName: arrow)
+                    .font(.system(size: 10, weight: .black))
+            }
+            Text(routine.badge)
+                .font(.system(size: routine.arrowSymbol == nil ? 11 : 12, weight: .heavy))
         }
     }
 }

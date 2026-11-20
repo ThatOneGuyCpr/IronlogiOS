@@ -205,7 +205,7 @@ struct ExerciseSettingsSheet: View {
             }
             .onAppear {
                 if !loaded {
-                    p = store.prescription(exerciseID)
+                    p = store.basePrescription(exerciseID)
                     loaded = true
                 }
             }

@@ -4,6 +4,18 @@ Versions follow `MAJOR.MINOR.PATCH`. Everything before 1.0.0 is pre-launch.
 Bump MINOR for new features, PATCH for fixes, in `project.yml` (`MARKETING_VERSION`).
 Releases show only the version number.
 
+## 0.8.0
+- Plans. Tap the plan button next to the date on Train (or Settings › Plan) to pick a program or build your own:
+  - Library: Upper / Lower (4 days), Full Body (2 or 3), Push / Pull / Legs (3 or 6), Power + Size (4, heavy A days), Arm focus (5), Lower body focus (3 or 4), Back and shoulders (4), Minimal (2). Filter by Balanced, Muscle focus, Strength or Short on time.
+  - Each program shows your week, sets per muscle per week against the 10–20 growth range, and how that compares with your current plan.
+  - Build your own: 2 to 6 days, set days or "whenever I can," and Grow / Keep / Light for each muscle (up to 3 on Grow). Grow adds a set to that muscle's exercises, Light takes one off.
+- New workouts behind the plans: Full Body A/B/C, Push, Pull and Legs (A and B), and an Arms & Shoulders day.
+- With set days, off days show a rest-day screen with your next workout and sets done so far this week, plus a Train anyway button. The week strip shrinks off days to a dot.
+- Exercises for muscles on Grow are tagged Focus in the lineup.
+- Widgets follow the plan: at 3 days or fewer the medium widget shows one slot per workout; at 2 days, a tile each. Rest days say so. Rings split into one segment per workout.
+- Five new icons: Plate and Blueprint, plus Skeuo, 1-Bit and Aero.
+- Your current setup carries over as Upper / Lower, 4 days, no set days.
+
 ## 0.7.1
 - New equipment: Preacher bench, with a dumbbell preacher curl. It's first in line for biceps on Upper A and second on Upper B, and it starts out open.
 - Counts read right when there's one: "1 set," "1 exercise," "1 machine taken."

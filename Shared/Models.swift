@@ -159,14 +159,32 @@ struct Slot: Hashable {
     let candidates: [String]
     /// Suggested superset with the next slot.
     var pairNext: Bool = false
+
+    /// The muscle this slot trains, from its label.
+    var muscle: Muscle {
+        switch label {
+        case "Chest press", "Incline press", "Incline chest", "Chest fly": return .chest
+        case "Vertical pull", "Row", "Pullover": return .back
+        case "Side delts", "Rear delts": return .shoulders
+        case "Biceps": return .biceps
+        case "Triceps": return .triceps
+        case "Squat pattern", "Single leg", "Quads": return .quads
+        case "Hinge", "Hamstrings", "Glutes": return .hams
+        case "Calves": return .calves
+        default: return .abs
+        }
+    }
 }
 
 enum RoutineID: String, CaseIterable, Codable, Identifiable {
     case upperA, upperB, lowerA, lowerB
+    case fullA, fullB, fullC
+    case pushA, pullA, legsA, pushB, pullB, legsB
+    case arms
 
     var id: String { rawValue }
 
-    /// Training order: Upper A, Lower A, Upper B, Lower B.
+    /// The original four-day order. Plans have their own rotation (Plan.rotation).
     static let cycle: [RoutineID] = [.upperA, .lowerA, .upperB, .lowerB]
 
     static func next(after last: RoutineID?) -> RoutineID {
@@ -180,13 +198,72 @@ enum RoutineID: String, CaseIterable, Codable, Identifiable {
         case .upperB: return "Upper B"
         case .lowerA: return "Lower A"
         case .lowerB: return "Lower B"
+        case .fullA: return "Full Body A"
+        case .fullB: return "Full Body B"
+        case .fullC: return "Full Body C"
+        case .pushA: return "Push A"
+        case .pullA: return "Pull A"
+        case .legsA: return "Legs A"
+        case .pushB: return "Push B"
+        case .pullB: return "Pull B"
+        case .legsB: return "Legs B"
+        case .arms: return "Arms & Shoulders"
+        }
+    }
+
+    /// Short name for pickers.
+    var shortTitle: String {
+        switch self {
+        case .fullA: return "Full A"
+        case .fullB: return "Full B"
+        case .fullC: return "Full C"
+        case .arms: return "Arms"
+        default: return title
         }
     }
 
     var isUpper: Bool { self == .upperA || self == .upperB }
 
-    /// "A" or "B".
-    var variant: String { (self == .upperA || self == .lowerA) ? "A" : "B" }
+    /// SF Symbol for the week strip, when the routine has a direction.
+    var arrowSymbol: String? {
+        switch self {
+        case .upperA, .upperB: return "arrow.up"
+        case .lowerA, .lowerB: return "arrow.down"
+        case .fullA, .fullB, .fullC: return "arrow.up.and.down"
+        default: return nil
+        }
+    }
+
+    /// "A", "B" or "C" where it applies.
+    var variant: String {
+        switch self {
+        case .upperA, .lowerA, .fullA, .pushA, .pullA, .legsA: return "A"
+        case .upperB, .lowerB, .fullB, .pushB, .pullB, .legsB: return "B"
+        case .fullC: return "C"
+        case .arms: return ""
+        }
+    }
+
+    /// Letters shown next to the arrow, or alone when there's no arrow.
+    var badge: String {
+        switch self {
+        case .pushA, .pushB: return "Pu"
+        case .pullA, .pullB: return "Pl"
+        case .legsA, .legsB: return "Lg"
+        case .arms: return "Ar"
+        default: return variant
+        }
+    }
+
+    /// Plain-text mark for widgets: "↑A", "↕B", "Pu".
+    var glyph: String {
+        switch self {
+        case .upperA, .upperB: return "↑" + variant
+        case .lowerA, .lowerB: return "↓" + variant
+        case .fullA, .fullB, .fullC: return "↕" + variant
+        default: return badge
+        }
+    }
 
     var code: String {
         switch self {
@@ -194,6 +271,16 @@ enum RoutineID: String, CaseIterable, Codable, Identifiable {
         case .upperB: return "UB"
         case .lowerA: return "LA"
         case .lowerB: return "LB"
+        case .fullA: return "FA"
+        case .fullB: return "FB"
+        case .fullC: return "FC"
+        case .pushA: return "PuA"
+        case .pullA: return "PlA"
+        case .legsA: return "LgA"
+        case .pushB: return "PuB"
+        case .pullB: return "PlB"
+        case .legsB: return "LgB"
+        case .arms: return "AR"
         }
     }
 
@@ -203,6 +290,13 @@ enum RoutineID: String, CaseIterable, Codable, Identifiable {
         case .upperB: return "Back, chest, delts, arms"
         case .lowerA: return "Quads, hinge, calves, abs"
         case .lowerB: return "Hinge, glutes, hams, abs"
+        case .fullA: return "Every muscle, squat and press first"
+        case .fullB: return "Every muscle, hinge and row first"
+        case .fullC: return "Every muscle, glutes and arms"
+        case .pushA, .pushB: return "Chest, side delts, triceps"
+        case .pullA, .pullB: return "Back, rear delts, biceps"
+        case .legsA, .legsB: return "Quads, hams, glutes, calves, abs"
+        case .arms: return "Biceps, triceps, delts"
         }
     }
 
@@ -240,8 +334,105 @@ enum RoutineID: String, CaseIterable, Codable, Identifiable {
             Slot(label: "Calves", candidates: ["lp_calf", "legmachine_calf", "smith_calf", "db_calf", "bw_calf"], pairNext: true),
             Slot(label: "Abs", candidates: ["cable_crunch", "ab_crunch", "plank"]),
         ]
+        case .fullA: return [
+            Slot(label: "Squat pattern", candidates: ["legpress", "smith_squat", "goblet"]),
+            Slot(label: "Chest press", candidates: ["db_bench", "smith_bench", "cable_press", "incline_pushup"]),
+            Slot(label: "Vertical pull", candidates: ["lat_wide", "cable_pulldown", "db_pullover"]),
+            Slot(label: "Hamstrings", candidates: ["leg_curl", "db_sl_rdl", "pullthrough"]),
+            Slot(label: "Side delts", candidates: ["cable_lat_raise", "db_lat_raise", "face_pull"]),
+            Slot(label: "Biceps", candidates: ["preacher_curl", "db_curl", "cable_curl", "incline_curl"], pairNext: true),
+            Slot(label: "Triceps", candidates: ["pushdown", "db_skull", "bench_dip", "smith_cgp"]),
+        ]
+        case .fullB: return [
+            Slot(label: "Hinge", candidates: ["db_rdl", "smith_rdl", "pullthrough"]),
+            Slot(label: "Incline chest", candidates: ["db_incline", "smith_incline", "cable_low_high", "db_fly"]),
+            Slot(label: "Row", candidates: ["cable_row", "cs_db_row", "one_arm_row", "smith_row"]),
+            Slot(label: "Single leg", candidates: ["db_bss", "db_lunge", "smith_split", "step_up"]),
+            Slot(label: "Side delts", candidates: ["db_lat_raise", "cable_lat_raise", "face_pull"]),
+            Slot(label: "Calves", candidates: ["legmachine_calf", "lp_calf", "smith_calf", "db_calf", "bw_calf"], pairNext: true),
+            Slot(label: "Abs", candidates: ["ab_crunch", "cable_crunch", "plank"]),
+        ]
+        case .fullC: return [
+            Slot(label: "Squat pattern", candidates: ["legpress_high", "smith_squat", "goblet"]),
+            Slot(label: "Chest press", candidates: ["smith_bench", "db_bench", "cable_press", "incline_pushup"]),
+            Slot(label: "Vertical pull", candidates: ["lat_close", "cable_pulldown", "straight_arm", "db_pullover"]),
+            Slot(label: "Glutes", candidates: ["smith_thrust", "db_thrust", "kickback"]),
+            Slot(label: "Biceps", candidates: ["hammer", "preacher_curl", "cable_curl", "incline_curl"], pairNext: true),
+            Slot(label: "Triceps", candidates: ["db_skull", "pushdown", "bench_dip", "smith_cgp"]),
+            Slot(label: "Calves", candidates: ["lp_calf", "legmachine_calf", "smith_calf", "db_calf", "bw_calf"], pairNext: true),
+            Slot(label: "Abs", candidates: ["cable_crunch", "ab_crunch", "plank"]),
+        ]
+        case .pushA: return [
+            Slot(label: "Chest press", candidates: ["db_bench", "smith_bench", "cable_press", "incline_pushup"]),
+            Slot(label: "Incline press", candidates: ["db_incline", "smith_incline", "cable_low_high"]),
+            Slot(label: "Chest fly", candidates: ["cable_low_high", "db_fly", "cable_press"]),
+            Slot(label: "Side delts", candidates: ["cable_lat_raise", "db_lat_raise"]),
+            Slot(label: "Triceps", candidates: ["pushdown", "db_skull", "smith_cgp", "bench_dip"]),
+            Slot(label: "Triceps", candidates: ["db_skull", "smith_cgp", "bench_dip", "pushdown"]),
+        ]
+        case .pullA: return [
+            Slot(label: "Vertical pull", candidates: ["lat_wide", "cable_pulldown", "db_pullover"]),
+            Slot(label: "Row", candidates: ["cable_row", "cs_db_row", "one_arm_row", "smith_row"]),
+            Slot(label: "Row", candidates: ["cs_db_row", "one_arm_row", "smith_row", "cable_row"]),
+            Slot(label: "Rear delts", candidates: ["face_pull", "cable_lat_raise", "db_lat_raise"]),
+            Slot(label: "Biceps", candidates: ["preacher_curl", "db_curl", "cable_curl", "incline_curl"]),
+            Slot(label: "Biceps", candidates: ["hammer", "cable_curl", "incline_curl", "db_curl"]),
+        ]
+        case .legsA: return [
+            Slot(label: "Squat pattern", candidates: ["legpress", "smith_squat", "goblet"]),
+            Slot(label: "Hinge", candidates: ["db_rdl", "smith_rdl", "pullthrough"]),
+            Slot(label: "Single leg", candidates: ["db_bss", "db_lunge", "step_up", "smith_split"]),
+            Slot(label: "Hamstrings", candidates: ["leg_curl", "db_sl_rdl", "pullthrough"]),
+            Slot(label: "Calves", candidates: ["legmachine_calf", "smith_calf", "lp_calf", "db_calf", "bw_calf"], pairNext: true),
+            Slot(label: "Abs", candidates: ["ab_crunch", "cable_crunch", "plank"]),
+        ]
+        case .pushB: return [
+            Slot(label: "Incline press", candidates: ["smith_incline", "db_incline", "cable_low_high"]),
+            Slot(label: "Chest press", candidates: ["smith_bench", "db_bench", "cable_press", "incline_pushup"]),
+            Slot(label: "Chest fly", candidates: ["db_fly", "cable_low_high", "cable_press"]),
+            Slot(label: "Side delts", candidates: ["db_lat_raise", "cable_lat_raise"]),
+            Slot(label: "Triceps", candidates: ["db_skull", "pushdown", "bench_dip", "smith_cgp"]),
+            Slot(label: "Triceps", candidates: ["smith_cgp", "pushdown", "bench_dip", "db_skull"]),
+        ]
+        case .pullB: return [
+            Slot(label: "Vertical pull", candidates: ["lat_close", "cable_pulldown", "db_pullover"]),
+            Slot(label: "Row", candidates: ["cs_db_row", "cable_row", "one_arm_row", "smith_row"]),
+            Slot(label: "Pullover", candidates: ["straight_arm", "db_pullover", "cable_pulldown"]),
+            Slot(label: "Rear delts", candidates: ["face_pull", "cable_lat_raise", "db_lat_raise"]),
+            Slot(label: "Biceps", candidates: ["hammer", "preacher_curl", "cable_curl", "db_curl"]),
+            Slot(label: "Biceps", candidates: ["incline_curl", "db_curl", "cable_curl", "preacher_curl"]),
+        ]
+        case .legsB: return [
+            Slot(label: "Hinge", candidates: ["smith_rdl", "db_rdl", "pullthrough"]),
+            Slot(label: "Squat pattern", candidates: ["legpress_high", "smith_squat", "goblet"]),
+            Slot(label: "Quads", candidates: ["leg_ext", "goblet", "db_lunge"]),
+            Slot(label: "Glutes", candidates: ["smith_thrust", "db_thrust", "kickback"]),
+            Slot(label: "Calves", candidates: ["lp_calf", "legmachine_calf", "smith_calf", "db_calf", "bw_calf"], pairNext: true),
+            Slot(label: "Abs", candidates: ["cable_crunch", "ab_crunch", "plank"]),
+        ]
+        case .arms: return [
+            Slot(label: "Biceps", candidates: ["preacher_curl", "db_curl", "cable_curl", "incline_curl"], pairNext: true),
+            Slot(label: "Triceps", candidates: ["pushdown", "db_skull", "bench_dip", "smith_cgp"]),
+            Slot(label: "Biceps", candidates: ["hammer", "incline_curl", "cable_curl", "db_curl"], pairNext: true),
+            Slot(label: "Triceps", candidates: ["db_skull", "smith_cgp", "bench_dip", "pushdown"]),
+            Slot(label: "Side delts", candidates: ["cable_lat_raise", "db_lat_raise"]),
+            Slot(label: "Rear delts", candidates: ["face_pull", "db_lat_raise"]),
+        ]
         }
     }
+}
+
+extension Library {
+    /// The main muscle an exercise trains, taken from the first slot that lists it.
+    static let muscleByID: [String: Muscle] = {
+        var out: [String: Muscle] = [:]
+        for r in RoutineID.allCases {
+            for slot in r.slots {
+                for id in slot.candidates where out[id] == nil { out[id] = slot.muscle }
+            }
+        }
+        return out
+    }()
 }
 
 // MARK: - Picking exercises from what's open
