@@ -1,19 +1,12 @@
 # Ironlog roadmap
 
-## Next: workout logging
-- Port everything from the PWA: start a workout, log weight and reps per set, rest timer, history, swap/skip/hide, mid-workout equipment changes that keep logged sets.
-- Per-exercise defaults for sets and rep range, based on common guidance (heavy compounds lower reps, isolation and calves higher). Everything editable per exercise, with a reset to default.
-- Rest defaults: 90s heavy compounds, 60s most work, 30s calves. Editable per exercise.
-- Form video link for each exercise, curated and checked.
-- Lock screen / Dynamic Island rest timer (Live Activity).
+Everything from the original plan has shipped: logging, presets, rest timers, move-up prompts, form videos, widgets, the lock screen rest timer, and the 0.6 and 0.7 visual updates. See CHANGELOG.md.
 
-## Later: smart progression
-- Track how long you've been at the same weight and rep range for each exercise.
-- When you've stalled (for example, many sessions in a row at the same dumbbell weight, or hitting the top of the range every time), ask whether you want to move up: more weight, a different rep range, or a harder variation.
-- Suggest backing off after repeated misses at the bottom of the range.
-- Always a prompt you accept or dismiss, never an automatic change.
+## Waiting on a paid Apple developer account
+- Apple Watch app. The target exists in project.yml; a free SideStore account can't sign it.
+- Saving workouts straight to Apple Health (currently off; the Watch logs workouts already).
+- Sharing data with Rouse, the alarm app: squat or walk missions on gym days, and the day's routine in the morning brief.
 
-## Platform pieces (depend on what SideStore can sign)
-- Home and lock screen widget: next routine, last workout.
-- Apple Health: save workouts.
-- Apple Watch: app, or the Live Activity showing up in the watch's Smart Stack.
+## Ideas, not decided
+- Habits tab: the daily 20-minute walk and anything else tracked daily, with a widget.
+- BJJ sessions logged alongside lifting.

@@ -3,7 +3,7 @@ import Foundation
 // MARK: - Equipment
 
 enum Equipment: String, CaseIterable, Codable, Identifiable, Hashable {
-    case dumbbells, smith, bench, cable, lat, legPress, legMachine, abMachine
+    case dumbbells, smith, bench, cable, lat, legPress, legMachine, abMachine, preacher
 
     var id: String { rawValue }
 
@@ -17,6 +17,7 @@ enum Equipment: String, CaseIterable, Codable, Identifiable, Hashable {
         case .legPress: return "Leg press"
         case .legMachine: return "Leg machine"
         case .abMachine: return "Ab machine"
+        case .preacher: return "Preacher bench"
         }
     }
 
@@ -109,6 +110,7 @@ enum Library {
         ex("hammer", "Hammer curl", [.dumbbells], Preset.isolation),
         ex("cable_curl", "Cable curl", [.cable], Preset.isolation),
         ex("incline_curl", "Incline dumbbell curl", [.dumbbells, .bench], Preset.isolation),
+        ex("preacher_curl", "Dumbbell preacher curl", [.preacher, .dumbbells], Preset.isolation),
         ex("pushdown", "Cable triceps pushdown", [.cable], Preset.isolation),
         ex("db_skull", "Dumbbell skull crusher", [.dumbbells, .bench], Preset.isolation),
         ex("smith_cgp", "Close-grip Smith bench press", [.smith, .bench], Preset.compound, inc: 10),
@@ -211,7 +213,7 @@ enum RoutineID: String, CaseIterable, Codable, Identifiable {
             Slot(label: "Vertical pull", candidates: ["lat_wide", "cable_pulldown", "db_pullover"]),
             Slot(label: "Incline press", candidates: ["db_incline", "smith_incline", "cable_low_high"]),
             Slot(label: "Row", candidates: ["cable_row", "cs_db_row", "one_arm_row", "smith_row"]),
-            Slot(label: "Biceps", candidates: ["db_curl", "cable_curl", "incline_curl"], pairNext: true),
+            Slot(label: "Biceps", candidates: ["preacher_curl", "db_curl", "cable_curl", "incline_curl"], pairNext: true),
             Slot(label: "Triceps", candidates: ["pushdown", "db_skull", "smith_cgp", "bench_dip"]),
         ]
         case .upperB: return [
@@ -219,7 +221,7 @@ enum RoutineID: String, CaseIterable, Codable, Identifiable {
             Slot(label: "Incline chest", candidates: ["smith_incline", "db_incline", "cable_low_high", "db_fly"]),
             Slot(label: "Row", candidates: ["cs_db_row", "cable_row", "one_arm_row", "smith_row"]),
             Slot(label: "Side delts", candidates: ["cable_lat_raise", "db_lat_raise", "face_pull"]),
-            Slot(label: "Biceps", candidates: ["hammer", "cable_curl", "incline_curl", "db_curl"], pairNext: true),
+            Slot(label: "Biceps", candidates: ["hammer", "preacher_curl", "cable_curl", "incline_curl", "db_curl"], pairNext: true),
             Slot(label: "Triceps", candidates: ["db_skull", "pushdown", "bench_dip", "smith_cgp"]),
         ]
         case .lowerA: return [

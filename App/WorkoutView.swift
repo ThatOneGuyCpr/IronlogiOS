@@ -172,7 +172,7 @@ struct WorkoutView: View {
         let taken = Equipment.allCases.filter { !store.data.open.contains($0) }
         if taken.isEmpty { return "" }
         if taken.count == 1 { return " · \(taken[0].name) taken" }
-        return " · \(taken.count) machines taken"
+        return " · " + taken.count.counted("machine") + " taken"
     }
 
     private func nextIndex(after current: Int, in s: Session) -> Int? {
@@ -268,7 +268,7 @@ private struct CompactRow: View {
 
     private var caption: String {
         if item.skipped { return "SKIPPED" }
-        if item.allDone { return "DONE · \(item.doneCount) SETS" }
+        if item.allDone { return "DONE · " + item.doneCount.counted("SET", "SETS") }
         if isNext { return "UP NEXT" }
         return slotLabel.uppercased()
     }

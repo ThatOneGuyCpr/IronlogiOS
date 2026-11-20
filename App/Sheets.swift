@@ -239,7 +239,7 @@ struct FinishSheet: View {
                 }
                 .padding(.top, 24)
                 HStack(spacing: 28) {
-                    stat(Double(entry.setCount), "sets", delay: 0.1)
+                    stat(Double(entry.setCount), entry.setCount == 1 ? "set" : "sets", delay: 0.1)
                     stat(entry.volume, "lb moved", delay: 0.2)
                     stat(Double(entry.minutes), "min", delay: 0.3)
                 }

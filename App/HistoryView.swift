@@ -49,7 +49,7 @@ private struct HistoryRow: View {
                         Label("\(records)", systemImage: "trophy.fill")
                             .font(.system(size: 12, weight: .bold))
                             .foregroundStyle(Theme.accentText)
-                            .accessibilityLabel("\(records) records")
+                            .accessibilityLabel(records.counted("record"))
                     }
                 }
                 Text(entry.date.formatted(.dateTime.weekday(.abbreviated).month(.abbreviated).day()) + " · \(entry.minutes) min")
@@ -58,7 +58,7 @@ private struct HistoryRow: View {
             }
             Spacer()
             VStack(alignment: .trailing, spacing: 3) {
-                Text("\(entry.setCount) sets").font(.subheadline)
+                Text(entry.setCount.counted("set")).font(.subheadline)
                 Text(entry.volume.formatted(.number.precision(.fractionLength(0))) + " lb")
                     .font(.caption)
                     .foregroundStyle(.secondary)

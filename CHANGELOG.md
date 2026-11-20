@@ -4,6 +4,10 @@ Versions follow `MAJOR.MINOR.PATCH`. Everything before 1.0.0 is pre-launch.
 Bump MINOR for new features, PATCH for fixes, in `project.yml` (`MARKETING_VERSION`).
 Releases show only the version number.
 
+## 0.7.1
+- New equipment: Preacher bench, with a dumbbell preacher curl. It's first in line for biceps on Upper A and second on Upper B, and it starts out open.
+- Counts read right when there's one: "1 set," "1 exercise," "1 machine taken."
+
 ## 0.7.0
 - Rest timer style in Settings › Workout screen: the bar, or a big ring with +15s and Skip on either side.
 - Compact mode: tighter set rows and cards, with the form video behind a play button in the card header.

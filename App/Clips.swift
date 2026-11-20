@@ -37,6 +37,7 @@ enum Clips {
         "hammer": "EalSIzmNPEQ",
         "cable_curl": "W0Wz4wXIIrQ",
         "incline_curl": "V8H4k8lquiU",
+        "preacher_curl": "Q9OROnQcIuE",
         "pushdown": "tev4QScR30s",
         "db_skull": "lFHcw45fvhQ",
         "smith_cgp": "GlGpVz5nPSQ",

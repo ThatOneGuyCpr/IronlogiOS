@@ -112,6 +112,8 @@ struct AppData: Codable {
     var compact = false
     /// Game icons unlock as you train. Off means every icon is open.
     var unlockIcons = false
+    /// Equipment this save has already seen. New equipment added in an update starts out open.
+    var knownEquipment: [String] = Equipment.allCases.map { $0.rawValue }
 
     init() {}
 
@@ -120,6 +122,11 @@ struct AppData: Codable {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         let d = AppData()
         open = try c.decodeIfPresent(Set<Equipment>.self, forKey: .open) ?? d.open
+        // Saves from before 0.7.1 didn't track this; those knew the original eight.
+        let known = try c.decodeIfPresent([String].self, forKey: .knownEquipment)
+            ?? ["dumbbells", "smith", "bench", "cable", "lat", "legPress", "legMachine", "abMachine"]
+        for eq in Equipment.allCases where !known.contains(eq.rawValue) { open.insert(eq) }
+        knownEquipment = Equipment.allCases.map { $0.rawValue }
         hidden = try c.decodeIfPresent(Set<String>.self, forKey: .hidden) ?? d.hidden
         history = try c.decodeIfPresent([HistoryEntry].self, forKey: .history) ?? d.history
         session = try? c.decodeIfPresent(Session.self, forKey: .session)

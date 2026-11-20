@@ -191,7 +191,7 @@ private struct MediumWeek: View {
                         .lineLimit(1)
                         .minimumScaleFactor(0.8)
                     Spacer(minLength: 0)
-                    Text("\(last.minutes) min · \(last.sets) sets · \(last.volume.formatted(.number.precision(.fractionLength(0)))) lb")
+                    Text("\(last.minutes) min · " + last.sets.counted("set") + " · \(last.volume.formatted(.number.precision(.fractionLength(0)))) lb")
                         .font(.system(size: 12, weight: .semibold))
                         .foregroundStyle(WP.sub)
                         .lineLimit(1)
@@ -258,7 +258,7 @@ private struct LargeOverview: View {
                     Text("\(last.routine.title) · \(WidgetSnapshot.relativeDay(last.date, now: entry.date))")
                         .font(.system(size: 15, weight: .bold))
                         .foregroundStyle(WP.ink)
-                    Text("\(last.minutes) min · \(last.sets) sets")
+                    Text("\(last.minutes) min · " + last.sets.counted("set"))
                         .font(.system(size: 12))
                         .foregroundStyle(WP.sub)
                 } else {
@@ -336,7 +336,7 @@ struct NextWorkoutView: View {
             VStack(alignment: .leading, spacing: 1) {
                 Text("Up next").font(.caption2)
                 Text(snap.next.title).font(.headline).widgetAccentable()
-                Text(snap.nextFirst.map { "\($0) first" } ?? "\(snap.nextCount) exercises")
+                Text(snap.nextFirst.map { "\($0) first" } ?? snap.nextCount.counted("exercise"))
                     .font(.caption2)
                     .lineLimit(1)
             }
@@ -348,7 +348,7 @@ struct NextWorkoutView: View {
                 Text(snap.next.title)
                     .font(.system(size: 22, weight: .heavy))
                     .foregroundStyle(WP.ink)
-                Text("\(snap.nextCount) exercises")
+                Text(snap.nextCount.counted("exercise"))
                     .font(.system(size: 12))
                     .foregroundStyle(WP.sub)
                 Spacer(minLength: 0)

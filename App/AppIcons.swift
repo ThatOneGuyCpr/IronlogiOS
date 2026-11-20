@@ -85,7 +85,7 @@ struct IconPicker: View {
         let totals: Store.TrainingTotals? = store.data.unlockIcons ? store.trainingTotals() : nil
         VStack(alignment: .leading, spacing: 14) {
             if let totals {
-                Text("\(totals.workouts) workouts · \(totals.records) records · \(totals.streak)-week streak")
+                Text(totals.workouts.counted("workout") + " · " + totals.records.counted("record") + " · \(totals.streak)-week streak")
                     .font(.system(size: 12, weight: .semibold))
                     .foregroundStyle(Theme.sub)
             }

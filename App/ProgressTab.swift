@@ -154,7 +154,7 @@ struct ProgressTab: View {
                             Text(entry.routine.title)
                                 .font(.system(size: 15, weight: .semibold))
                                 .foregroundStyle(Theme.ink)
-                            Text(entry.date.formatted(.dateTime.weekday(.abbreviated).month(.abbreviated).day()) + " · \(entry.minutes) min · \(entry.setCount) sets")
+                            Text(entry.date.formatted(.dateTime.weekday(.abbreviated).month(.abbreviated).day()) + " · \(entry.minutes) min · " + entry.setCount.counted("set"))
                                 .font(.system(size: 13))
                                 .foregroundStyle(Theme.sub)
                         }

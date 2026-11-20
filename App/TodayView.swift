@@ -90,7 +90,7 @@ struct TodayView: View {
                     .foregroundStyle(Theme.sub)
             }
             HStack(spacing: 16) {
-                meta("list.bullet", "\(picks.compactMap { $0 }.count) exercises")
+                meta("list.bullet", picks.compactMap { $0 }.count.counted("exercise"))
                 meta("clock", "About \(store.estimatedMinutes(routine)) min")
                 Button {
                     showEquipment = true
