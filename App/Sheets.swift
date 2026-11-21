@@ -228,16 +228,21 @@ struct FinishSheet: View {
         let party = store.data.celebrations
         ScrollView {
             VStack(spacing: 20) {
-                VStack(spacing: 8) {
-                    Image(systemName: records.isEmpty ? "checkmark.circle.fill" : "trophy.circle.fill")
-                        .font(.system(size: 46))
-                        .foregroundStyle(Theme.accent)
-                        .symbolEffect(.bounce, value: appeared)
-                    Text("Workout saved")
-                        .font(.system(size: 24, weight: .heavy))
-                        .foregroundStyle(Theme.ink)
+                if Theme.skin.id == "vice" {
+                    missionPassed
+                } else {
+                    VStack(spacing: 8) {
+                        Image(systemName: records.isEmpty ? "checkmark.circle.fill" : "trophy.circle.fill")
+                            .font(.system(size: 46))
+                            .foregroundStyle(Theme.accent)
+                            .symbolEffect(.bounce, value: appeared)
+                        Text(Theme.words.finish)
+                            .font(Theme.display(24))
+                            .multilineTextAlignment(.center)
+                            .foregroundStyle(Theme.head)
+                    }
+                    .padding(.top, 24)
                 }
-                .padding(.top, 24)
                 HStack(spacing: 28) {
                     stat(Double(entry.setCount), entry.setCount == 1 ? "set" : "sets", delay: 0.1)
                     stat(entry.volume, "lb moved", delay: 0.2)
@@ -246,23 +251,23 @@ struct FinishSheet: View {
                 if !records.isEmpty {
                     VStack(alignment: .leading, spacing: 10) {
                         Label(records.count == 1 ? "New record" : "\(records.count) new records", systemImage: "trophy.fill")
-                            .font(.system(size: 15, weight: .bold))
+                            .font(Theme.font(size: 15, weight: .bold))
                             .foregroundStyle(Theme.accentText)
                         ForEach(records) { r in
                             VStack(alignment: .leading, spacing: 1) {
                                 Text(r.name)
-                                    .font(.system(size: 15, weight: .semibold))
+                                    .font(Theme.font(size: 15, weight: .semibold))
                                     .foregroundStyle(Theme.ink)
                                 Text(r.text)
-                                    .font(.system(size: 13))
+                                    .font(Theme.font(size: 13))
                                     .foregroundStyle(Theme.sub)
                             }
                         }
                     }
                     .padding(16)
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(Theme.promptBg, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
-                    .overlay(RoundedRectangle(cornerRadius: 20, style: .continuous).stroke(Theme.promptBorder, lineWidth: 1))
+                    .background(Theme.promptBg, in: RoundedRectangle(cornerRadius: Theme.radius(20), style: .continuous))
+                    .overlay(RoundedRectangle(cornerRadius: Theme.radius(20), style: .continuous).stroke(Theme.promptBorder, lineWidth: 1))
                     .padding(.horizontal, 24)
                     .scaleEffect(appeared || !party ? 1 : 0.92)
                     .opacity(appeared || !party ? 1 : 0)
@@ -270,7 +275,7 @@ struct FinishSheet: View {
                 if !store.newUnlocks.isEmpty {
                     VStack(alignment: .leading, spacing: 10) {
                         Label(store.newUnlocks.count == 1 ? "Icon unlocked" : "\(store.newUnlocks.count) icons unlocked", systemImage: "lock.open.fill")
-                            .font(.system(size: 15, weight: .bold))
+                            .font(Theme.font(size: 15, weight: .bold))
                             .foregroundStyle(Theme.accentText)
                         ForEach(store.newUnlocks) { option in
                             HStack(spacing: 12) {
@@ -279,7 +284,7 @@ struct FinishSheet: View {
                                     .frame(width: 44, height: 44)
                                     .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
                                 Text(option.name)
-                                    .font(.system(size: 15, weight: .semibold))
+                                    .font(Theme.font(size: 15, weight: .semibold))
                                     .foregroundStyle(Theme.ink)
                                 Spacer()
                                 Button("Use it") {
@@ -292,8 +297,8 @@ struct FinishSheet: View {
                     }
                     .padding(16)
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(Theme.promptBg, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
-                    .overlay(RoundedRectangle(cornerRadius: 20, style: .continuous).stroke(Theme.promptBorder, lineWidth: 1))
+                    .background(Theme.promptBg, in: RoundedRectangle(cornerRadius: Theme.radius(20), style: .continuous))
+                    .overlay(RoundedRectangle(cornerRadius: Theme.radius(20), style: .continuous).stroke(Theme.promptBorder, lineWidth: 1))
                     .padding(.horizontal, 24)
                 }
                 if store.data.healthViaShortcut, let url = store.healthShortcutURL(minutes: entry.minutes) {
@@ -311,7 +316,17 @@ struct FinishSheet: View {
             }
             .padding(.bottom, 24)
         }
-        .background { SkyBackground() }
+        .background {
+            if Theme.skin.id == "vice" {
+                ZStack {
+                    Image("ViceBackdrop").resizable().scaledToFill()
+                    LinearGradient(colors: [.black.opacity(0.1), .black.opacity(0.35), .black.opacity(0.85)], startPoint: .top, endPoint: .bottom)
+                }
+                .ignoresSafeArea()
+            } else {
+                SkyBackground()
+            }
+        }
         .overlay {
             if party && !records.isEmpty && !reduceMotion {
                 ConfettiView(count: 120, duration: 3.5).ignoresSafeArea()
@@ -322,6 +337,32 @@ struct FinishSheet: View {
             withAnimation(.spring(duration: 0.5, bounce: 0.35).delay(0.35)) { appeared = true }
         }
         .onDisappear { store.newUnlocks = [] }
+    }
+
+    /// GTA-style end card.
+    private var missionPassed: some View {
+        let ink = Color(red: 0.04, green: 0.02, blue: 0.07)
+        return VStack(spacing: 6) {
+            Text(Theme.words.finish)
+                .font(Theme.display(50, .bold))
+                .lineLimit(1)
+                .minimumScaleFactor(0.6)
+                .foregroundStyle(Color(red: 0.94, green: 0.78, blue: 0.31))
+                .outlined(ink, width: 2.2)
+                .scaleEffect(appeared || reduceMotion ? 1 : 1.25)
+                .opacity(appeared || reduceMotion ? 1 : 0)
+            if let sub = Theme.words.finishSub {
+                Text(sub)
+                    .font(Theme.display(24, .bold))
+                    .foregroundStyle(.white)
+                    .outlined(ink, width: 1.5)
+            }
+        }
+        .padding(.vertical, 18)
+        .frame(maxWidth: .infinity)
+        .background(LinearGradient(colors: [ink.opacity(0), ink.opacity(0.72), ink.opacity(0.72), ink.opacity(0)], startPoint: .leading, endPoint: .trailing))
+        .padding(.top, 70)
+        .padding(.bottom, 10)
     }
 
     private func stat(_ value: Double, _ label: String, delay: Double) -> some View {
@@ -336,7 +377,7 @@ struct FinishSheet: View {
                 .font(Theme.num(28))
                 .foregroundStyle(Theme.ink)
             Text(label.uppercased())
-                .font(.system(size: 11, weight: .bold))
+                .font(Theme.font(size: 11, weight: .bold))
                 .foregroundStyle(Theme.sub)
         }
     }

@@ -28,7 +28,7 @@ struct WorkoutLockView: View {
         HStack(alignment: .center, spacing: 12) {
             VStack(alignment: .leading, spacing: 2) {
                 Text(context.attributes.routine.uppercased())
-                    .font(.caption2.weight(.bold))
+                    .font(Skin.stored.isGlacier ? .caption2.weight(.bold) : Skin.stored.label.font(11, .bold))
                     .foregroundStyle(Color.white.opacity(0.7))
                 Text(context.state.exercise)
                     .font(small ? .caption.weight(.semibold) : .headline)
@@ -46,7 +46,7 @@ struct WorkoutLockView: View {
                         .foregroundStyle(Color.white.opacity(0.7))
                 }
                 RestTimerText(state: context.state)
-                    .font(small ? .title3.weight(.semibold) : .system(size: 36, weight: .semibold))
+                    .font(small ? .title3.weight(.semibold) : (Skin.stored.isGlacier ? .system(size: 36, weight: .semibold) : Skin.stored.number.font(32, .semibold)))
                     .monospacedDigit()
                     .foregroundStyle(Color.white)
                     .multilineTextAlignment(.trailing)
@@ -61,7 +61,7 @@ struct WorkoutLiveActivity: Widget {
     var body: some WidgetConfiguration {
         ActivityConfiguration(for: WorkoutActivityAttributes.self) { context in
             WorkoutLockView(context: context)
-                .activityBackgroundTint(Palette.stored.deepColor.opacity(0.9))
+                .activityBackgroundTint((Skin.stored.colors?.deep.color ?? Palette.stored.deepColor).opacity(0.9))
                 .activitySystemActionForegroundColor(Color.white)
         } dynamicIsland: { context in
             DynamicIsland {

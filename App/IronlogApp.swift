@@ -15,7 +15,7 @@ struct IronlogApp: App {
             RootView()
                 .environmentObject(store)
                 .environmentObject(rest)
-                .preferredColorScheme((Appearance(rawValue: store.data.appearance) ?? .system).scheme)
+                .preferredColorScheme(Skin.named(store.data.skin).scheme ?? (Appearance(rawValue: store.data.appearance) ?? .system).scheme)
         }
         .onChange(of: phase) { _, newPhase in
             if newPhase != .active {
@@ -38,23 +38,13 @@ struct RootView: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
-        TabView(selection: $tab) {
-            Tab("Train", systemImage: "dumbbell.fill", value: AppTab.train) {
-                TrainTab()
-            }
-            Tab("Progress", systemImage: "chart.bar.fill", value: AppTab.progress) {
-                ProgressTab()
-            }
-            Tab("History", systemImage: "clock.arrow.circlepath", value: AppTab.history) {
-                HistoryView()
-            }
-            Tab("Settings", systemImage: "slider.horizontal.3", value: AppTab.settings) {
-                SettingsView()
-            }
-        }
+        tabs
         // Colors are read from the theme when views draw, so rebuild everything when the look changes.
         .id(store.lookID)
         .tint(Theme.accent)
+        .font(Theme.font(size: 17))
+        .textCase(Theme.skin.allCaps ? .uppercase : nil)
+        .task { await AppIcons.retireRemoved() }
         .overlay(alignment: .top) {
             if let c = store.celebration {
                 ZStack(alignment: .top) {
@@ -78,11 +68,57 @@ struct RootView: View {
         .sensoryFeedback(.success, trigger: store.celebration?.id) { _, new in new != nil }
         .sheet(item: $store.lastFinished) { entry in
             FinishSheet(entry: entry)
-                .presentationDetents([.medium, .large])
+                .themedText()
+                .presentationDetents(Theme.skin.id == "vice" ? [.large] : [.medium, .large])
+        }
+        .sheet(isPresented: $store.showThemes) {
+            NavigationStack {
+                ThemePickerView()
+                    .toolbar {
+                        ToolbarItem(placement: .confirmationAction) {
+                            Button("Done") { store.showThemes = false }
+                        }
+                    }
+            }
+            .themedText()
+            .presentationDetents([.large])
         }
         .onOpenURL { url in handle(url) }
         .alert(notice ?? "", isPresented: Binding(get: { notice != nil }, set: { if !$0 { notice = nil } })) {
             Button("OK") { notice = nil }
+        }
+    }
+
+    @ViewBuilder
+    private var tabs: some View {
+        if Theme.skin.tab == .system {
+            TabView(selection: $tab) {
+                Tab("Train", systemImage: "dumbbell.fill", value: AppTab.train) {
+                    TrainTab()
+                }
+                Tab("Progress", systemImage: "chart.bar.fill", value: AppTab.progress) {
+                    ProgressTab()
+                }
+                Tab("History", systemImage: "clock.arrow.circlepath", value: AppTab.history) {
+                    HistoryView()
+                }
+                Tab("Settings", systemImage: "slider.horizontal.3", value: AppTab.settings) {
+                    SettingsView()
+                }
+            }
+        } else {
+            // Themes draw their own tab bar.
+            Group {
+                switch tab {
+                case .train: TrainTab()
+                case .progress: ProgressTab()
+                case .history: HistoryView()
+                case .settings: SettingsView()
+                }
+            }
+            .safeAreaInset(edge: .bottom, spacing: 0) {
+                ThemedTabBar(tab: $tab)
+            }
         }
     }
 

@@ -152,25 +152,25 @@ struct ClipBox: View {
                     Circle()
                         .fill(Color.white.opacity(0.92))
                         .frame(width: 52, height: 52)
-                        .overlay(Image(systemName: "play.fill").font(.system(size: 20)).foregroundStyle(Color(red: 0.04, green: 0.11, blue: 0.18)))
+                        .overlay(Image(systemName: "play.fill").font(Theme.font(size: 20)).foregroundStyle(Color(red: 0.04, green: 0.11, blue: 0.18)))
                         .shadow(color: .black.opacity(0.2), radius: 8, y: 4)
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                 }
 
                 Text(label(for: source))
-                    .font(.system(size: 12, weight: .bold))
+                    .font(Theme.font(size: 12, weight: .bold))
                     .foregroundStyle(Color.white)
                     .padding(.horizontal, 8)
                     .padding(.vertical, 4)
-                    .background(Color.black.opacity(0.4), in: RoundedRectangle(cornerRadius: 8))
+                    .background(Color.black.opacity(0.4), in: RoundedRectangle(cornerRadius: Theme.radius(8)))
                     .padding(10)
             }
             .frame(height: 140)
             .frame(maxWidth: .infinity)
-            .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+            .clipShape(RoundedRectangle(cornerRadius: Theme.radius(18), style: .continuous))
             // The thumbnail is taller than the box; without this its hidden overflow
             // still caught taps meant for the buttons above it.
-            .contentShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+            .contentShape(RoundedRectangle(cornerRadius: Theme.radius(18), style: .continuous))
         }
         .buttonStyle(.plain)
         .accessibilityLabel("Play form clip for \(exercise.name)")
@@ -278,11 +278,11 @@ struct ClipPlayerSheet: View {
     private func unavailable(_ text: String) -> some View {
         VStack(spacing: 12) {
             Image(systemName: "play.slash")
-                .font(.system(size: 34))
+                .font(Theme.font(size: 34))
             Text(text)
-                .font(.system(size: 15, weight: .semibold))
+                .font(Theme.font(size: 15, weight: .semibold))
             Text("Tap Pick a different video to choose one.")
-                .font(.system(size: 13))
+                .font(Theme.font(size: 13))
                 .opacity(0.7)
         }
         .foregroundStyle(Color.white)
@@ -321,7 +321,7 @@ struct VideoPicker: View {
                             .buttonStyle(PrimaryButtonStyle())
                     } else {
                         Text("Search shows videos under 4 minutes. Open one to use it.")
-                            .font(.system(size: 13, weight: .medium))
+                            .font(Theme.font(size: 13, weight: .medium))
                             .foregroundStyle(Theme.sub)
                     }
                 }

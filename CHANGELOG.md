@@ -4,6 +4,23 @@ Versions follow `MAJOR.MINOR.PATCH`. Everything before 1.0.0 is pre-launch.
 Bump MINOR for new features, PATCH for fixes, in `project.yml` (`MARKETING_VERSION`).
 Releases show only the version number.
 
+## 0.9.0
+- Themes. Settings › Look › Theme restyles the whole app (type, shapes, textures, colors, the tab bar, even a few words) plus the widgets and the lock screen timer:
+  - Glacier: the original, with its color, background and number settings.
+  - 8-Bit: console RPG menus, pixel type, an XP bar for the week.
+  - Broadsheet: a newspaper front page with a masthead and serif headlines.
+  - Terminal: green on black, command prompts, monospace everything.
+  - Swiss: poster grid, huge type, black rules and one red.
+  - Aero: Windows 7 glass windows on an aurora wallpaper, with a taskbar for tabs.
+  - 1-Bit: a classic Mac desktop with striped title bars and checkbox days.
+  - Main Event: an 80s fight poster with chrome lettering. Done days are W's, today is LIVE.
+  - Broadcast: TV sports graphics, a lower-third headline and a line score for the week.
+  - Vice City: sunset missions, wanted stars for the week, and Mission Passed when you finish.
+- Each theme can switch the app icon to match (on by default) and keeps its own color unless you pick another.
+- Six new icons: Cartridge, Press, Prompt, Poster and Vice City to match the themes, plus Neon.
+- 1-Bit's icon sits inside the icon mask now, and Aero's is a glass orb on an aurora.
+- Blueprint is gone. If you were using it, you're back on the main icon.
+
 ## 0.8.0
 - Plans. Tap the plan button next to the date on Train (or Settings › Plan) to pick a program or build your own:
   - Library: Upper / Lower (4 days), Full Body (2 or 3), Push / Pull / Legs (3 or 6), Power + Size (4, heavy A days), Arm focus (5), Lower body focus (3 or 4), Back and shoulders (4), Minimal (2). Filter by Balanced, Muscle focus, Strength or Short on time.

@@ -10,7 +10,7 @@ options:
 settings:
   base:
     SWIFT_VERSION: "5.0"
-    MARKETING_VERSION: "0.8.0"
+    MARKETING_VERSION: "0.9.0"
     CURRENT_PROJECT_VERSION: "1"
     CODE_SIGN_STYLE: Manual
     DEVELOPMENT_TEAM: ""
@@ -26,6 +26,9 @@ targets:
       - LiveActivity
       - path: Videos
         type: folder
+      - path: Fonts
+        buildPhase: resources
+        excludes: ["*.md"]
     info:
       path: App/Info.plist
       properties:
@@ -39,6 +42,7 @@ targets:
           - CFBundleURLName: com.ironlog.app
             CFBundleURLSchemes: [ironlog]
         LSApplicationQueriesSchemes: [shortcuts]
+        UIAppFonts: [IL-Anton-400.ttf, IL-Archivo-400.ttf, IL-Archivo-500.ttf, IL-Archivo-700.ttf, IL-ArchivoBlack-400.ttf, IL-BarlowCond-500.ttf, IL-BarlowCond-600.ttf, IL-BarlowCond-700.ttf, IL-BarlowCond-700i.ttf, IL-BarlowCond-800.ttf, IL-BarlowCond-800i.ttf, IL-Franklin-500.ttf, IL-Franklin-700.ttf, IL-Franklin-800.ttf, IL-JBMono-400.ttf, IL-JBMono-700.ttf, IL-JBMono-800.ttf, IL-Oswald-500.ttf, IL-Oswald-600.ttf, IL-Oswald-700.ttf, IL-PassionOne-400.ttf, IL-PassionOne-700.ttf, IL-Pixelify-400.ttf, IL-Pixelify-500.ttf, IL-Pixelify-600.ttf, IL-Pixelify-700.ttf, IL-Playfair-700.ttf, IL-Playfair-900.ttf, IL-PressStart2P-400.ttf, IL-Rubik-400.ttf, IL-Rubik-500.ttf, IL-Rubik-600.ttf, IL-Rubik-700.ttf, IL-Silkscreen-400.ttf, IL-SourceSerif-400.ttf, IL-SourceSerif-600.ttf, IL-Unifraktur-400.ttf, IL-VT323-400.ttf, IL-Yellowtail-400.ttf]
     entitlements:
       path: App/Ironlog.entitlements
       properties:
@@ -48,7 +52,7 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: com.ironlog.app
         TARGETED_DEVICE_FAMILY: "1"
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
-        ASSETCATALOG_COMPILER_ALTERNATE_APPICON_NAMES: "AppIcon-pixel AppIcon-pocket AppIcon-arcade AppIcon-loot AppIcon-levelup AppIcon-mainevent AppIcon-titlebelt AppIcon-grit AppIcon-studio AppIcon-graphite AppIcon-ember AppIcon-blackout AppIcon-plate AppIcon-blueprint AppIcon-skeuo AppIcon-onebit AppIcon-aero"
+        ASSETCATALOG_COMPILER_ALTERNATE_APPICON_NAMES: "AppIcon-pixel AppIcon-pocket AppIcon-arcade AppIcon-loot AppIcon-levelup AppIcon-mainevent AppIcon-titlebelt AppIcon-grit AppIcon-studio AppIcon-graphite AppIcon-ember AppIcon-blackout AppIcon-plate AppIcon-skeuo AppIcon-onebit AppIcon-aero AppIcon-cartridge AppIcon-press AppIcon-prompt AppIcon-poster AppIcon-neon AppIcon-vice"
         ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS: YES
     dependencies:
       - target: IronlogWidget
@@ -60,12 +64,16 @@ targets:
       - Widget
       - Shared
       - LiveActivity
+      - path: Fonts
+        buildPhase: resources
+        excludes: ["*.md"]
     info:
       path: Widget/Info.plist
       properties:
         CFBundleDisplayName: Ironlog
         CFBundleShortVersionString: $(MARKETING_VERSION)
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        UIAppFonts: [IL-Anton-400.ttf, IL-Archivo-400.ttf, IL-Archivo-500.ttf, IL-Archivo-700.ttf, IL-ArchivoBlack-400.ttf, IL-BarlowCond-500.ttf, IL-BarlowCond-600.ttf, IL-BarlowCond-700.ttf, IL-BarlowCond-700i.ttf, IL-BarlowCond-800.ttf, IL-BarlowCond-800i.ttf, IL-Franklin-500.ttf, IL-Franklin-700.ttf, IL-Franklin-800.ttf, IL-JBMono-400.ttf, IL-JBMono-700.ttf, IL-JBMono-800.ttf, IL-Oswald-500.ttf, IL-Oswald-600.ttf, IL-Oswald-700.ttf, IL-PassionOne-400.ttf, IL-PassionOne-700.ttf, IL-Pixelify-400.ttf, IL-Pixelify-500.ttf, IL-Pixelify-600.ttf, IL-Pixelify-700.ttf, IL-Playfair-700.ttf, IL-Playfair-900.ttf, IL-PressStart2P-400.ttf, IL-Rubik-400.ttf, IL-Rubik-500.ttf, IL-Rubik-600.ttf, IL-Rubik-700.ttf, IL-Silkscreen-400.ttf, IL-SourceSerif-400.ttf, IL-SourceSerif-600.ttf, IL-Unifraktur-400.ttf, IL-VT323-400.ttf, IL-Yellowtail-400.ttf]
         NSExtension:
           NSExtensionPointIdentifier: com.apple.widgetkit-extension
     entitlements:

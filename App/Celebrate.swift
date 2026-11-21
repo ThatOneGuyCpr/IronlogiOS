@@ -71,16 +71,16 @@ struct RecordBanner: View {
     var body: some View {
         HStack(spacing: 12) {
             Image(systemName: "trophy.fill")
-                .font(.system(size: 22, weight: .bold))
+                .font(Theme.font(size: 22, weight: .bold))
                 .foregroundStyle(Theme.accentInk)
                 .symbolEffect(.bounce, value: bounce)
             VStack(alignment: .leading, spacing: 1) {
                 Text(celebration.title.uppercased())
-                    .font(.system(size: 11, weight: .heavy))
+                    .font(Theme.font(size: 11, weight: .heavy))
                     .tracking(1)
                     .opacity(0.85)
                 Text(celebration.detail)
-                    .font(.system(size: 15, weight: .bold))
+                    .font(Theme.font(size: 15, weight: .bold))
                     .lineLimit(2)
             }
             .foregroundStyle(Theme.accentInk)
@@ -88,7 +88,7 @@ struct RecordBanner: View {
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
-        .background(Theme.accent, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+        .background(Theme.accent, in: RoundedRectangle(cornerRadius: Theme.radius(22), style: .continuous))
         .shadow(color: Theme.shadow, radius: 16, y: 6)
         .padding(.horizontal, 16)
         .onAppear { bounce.toggle() }

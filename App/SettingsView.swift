@@ -13,32 +13,51 @@ struct SettingsView: View {
     var body: some View {
         NavigationStack {
             Form {
+                Group {
                 Section("Look") {
-                    Picker("Appearance", selection: $store.data.appearance) {
-                        ForEach(Appearance.allCases) { a in
-                            Text(a.label).tag(a.rawValue)
+                    Button {
+                        store.showThemes = true
+                    } label: {
+                        HStack(spacing: 12) {
+                            ThemeSwatch(skin: Theme.skin)
+                                .frame(width: 54, height: 40)
+                            VStack(alignment: .leading, spacing: 1) {
+                                Text("Theme").foregroundStyle(Theme.ink)
+                                Text(Theme.skin.name).font(Theme.font(size: 13)).foregroundStyle(Theme.sub)
+                            }
+                            Spacer()
+                            Image(systemName: "chevron.right")
+                                .font(.system(size: 13, weight: .bold))
+                                .foregroundStyle(Theme.sub)
                         }
                     }
-                    ColorPickerRow()
-                    Picker("Background", selection: $store.data.background) {
-                        ForEach(BackgroundStyle.allCases) { b in
-                            Text(b.label).tag(b.rawValue)
-                        }
-                    }
-                    VStack(alignment: .leading, spacing: 10) {
-                        Picker("Numbers", selection: $store.data.numberStyle) {
-                            ForEach(NumberStyle.allCases) { n in
-                                Text(n.label).tag(n.rawValue)
+                    if Theme.skin.isGlacier {
+                        Picker("Appearance", selection: $store.data.appearance) {
+                            ForEach(Appearance.allCases) { a in
+                                Text(a.label).tag(a.rawValue)
                             }
                         }
-                        HStack(alignment: .firstTextBaseline, spacing: 14) {
-                            Text("185").font(Theme.num(34))
-                            Text("lb").font(.system(size: 15, weight: .semibold)).foregroundStyle(.secondary)
-                            Spacer()
-                            Text("1:30").font(Theme.num(28))
-                                .foregroundStyle(Theme.accentText)
+                        ColorPickerRow()
+                        Picker("Background", selection: $store.data.background) {
+                            ForEach(BackgroundStyle.allCases) { b in
+                                Text(b.label).tag(b.rawValue)
+                            }
                         }
-                        .accessibilityHidden(true)
+                        VStack(alignment: .leading, spacing: 10) {
+                            Picker("Numbers", selection: $store.data.numberStyle) {
+                                ForEach(NumberStyle.allCases) { n in
+                                    Text(n.label).tag(n.rawValue)
+                                }
+                            }
+                            HStack(alignment: .firstTextBaseline, spacing: 14) {
+                                Text("185").font(Theme.num(34))
+                                Text("lb").font(Theme.font(size: 15, weight: .semibold)).foregroundStyle(.secondary)
+                                Spacer()
+                                Text("1:30").font(Theme.num(28))
+                                    .foregroundStyle(Theme.accentText)
+                            }
+                            .accessibilityHidden(true)
+                        }
                     }
                     Toggle("Celebrate records", isOn: $store.data.celebrations)
                 }
@@ -147,10 +166,12 @@ struct SettingsView: View {
                 Section {
                     Button("Erase all data", role: .destructive) { confirmErase = true }
                 }
+                }
+                .listRowBackground(Theme.row)
             }
             .scrollContentBackground(.hidden)
             .background { SkyBackground() }
-            .navigationTitle("Settings")
+            .navigationTitle(Theme.skin.isGlacier ? "Settings" : Theme.words.tabs[3])
             .onAppear { exportURL = store.exportFileURL() }
             .fileImporter(isPresented: $importing, allowedContentTypes: [.json]) { result in
                 handleImport(result)

@@ -62,7 +62,7 @@ struct WorkoutView: View {
                             confirmDiscard = true
                         } label: {
                             Text("Discard workout")
-                                .font(.system(size: 15, weight: .semibold))
+                                .font(Theme.font(size: 15, weight: .semibold))
                                 .foregroundStyle(Theme.warn)
                                 .frame(maxWidth: .infinity, minHeight: 44)
                         }
@@ -89,12 +89,12 @@ struct WorkoutView: View {
                     if let s = store.data.session {
                         VStack(spacing: 1) {
                             Text(s.routine.title)
-                                .font(.system(size: 17, weight: .bold))
-                                .foregroundStyle(Theme.ink)
+                                .font(Theme.font(size: 17, weight: .bold))
+                                .foregroundStyle(Theme.head)
                             (Text(s.start, style: .timer) + Text(takenSuffix))
-                                .font(.system(size: 12, weight: .semibold))
+                                .font(Theme.font(size: 12, weight: .semibold))
                                 .monospacedDigit()
-                                .foregroundStyle(Theme.sub)
+                                .foregroundStyle(Theme.headSub)
                         }
                     }
                 }
@@ -246,17 +246,17 @@ private struct CompactRow: View {
                 badge
                 VStack(alignment: .leading, spacing: 1) {
                     Text(caption)
-                        .font(.system(size: 11, weight: .bold))
+                        .font(Theme.font(size: 11, weight: .bold))
                         .tracking(0.6)
                         .foregroundStyle(isNext ? Theme.accentText : Theme.sub)
                     Text(ex?.name ?? "Nothing open for \(slotLabel.lowercased())")
-                        .font(.system(size: 15, weight: .semibold))
+                        .font(Theme.font(size: 15, weight: .semibold))
                         .foregroundStyle(ex == nil ? Theme.sub : Theme.ink)
                         .strikethrough(item.skipped)
                 }
                 Spacer(minLength: 0)
                 Image(systemName: ex == nil ? "arrow.left.arrow.right" : "chevron.down")
-                    .font(.system(size: 14, weight: .bold))
+                    .font(Theme.font(size: 14, weight: .bold))
                     .foregroundStyle(Theme.sub)
             }
             .contentShape(Rectangle())
@@ -277,21 +277,21 @@ private struct CompactRow: View {
     private var badge: some View {
         if item.allDone {
             Image(systemName: "checkmark")
-                .font(.system(size: 13, weight: .heavy))
+                .font(Theme.font(size: 13, weight: .heavy))
                 .frame(width: 28, height: 28)
-                .background(Theme.good, in: RoundedRectangle(cornerRadius: 9, style: .continuous))
+                .background(Theme.good, in: RoundedRectangle(cornerRadius: Theme.radius(9), style: .continuous))
                 .foregroundStyle(Theme.goodInk)
         } else if item.skipped {
             Image(systemName: "forward.fill")
-                .font(.system(size: 11, weight: .bold))
+                .font(Theme.font(size: 11, weight: .bold))
                 .frame(width: 28, height: 28)
-                .background(Theme.chip, in: RoundedRectangle(cornerRadius: 9, style: .continuous))
+                .background(Theme.chip, in: RoundedRectangle(cornerRadius: Theme.radius(9), style: .continuous))
                 .foregroundStyle(Theme.sub)
         } else {
             Text("\(number)")
-                .font(.system(size: 13, weight: .bold))
+                .font(Theme.font(size: 13, weight: .bold))
                 .frame(width: 28, height: 28)
-                .background(isNext ? Theme.accentSoft : Theme.chip, in: RoundedRectangle(cornerRadius: 9, style: .continuous))
+                .background(isNext ? Theme.accentSoft : Theme.chip, in: RoundedRectangle(cornerRadius: Theme.radius(9), style: .continuous))
                 .foregroundStyle(isNext ? Theme.accentText : Theme.sub)
         }
     }
@@ -321,11 +321,11 @@ struct FocusCard: View {
             HStack(alignment: .top, spacing: 10) {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("\(paired ? "SUPERSET · " : "")\(slotLabel.uppercased()) · \(index + 1) OF \(total)")
-                        .font(.system(size: 11, weight: .bold))
+                        .font(Theme.font(size: 11, weight: .bold))
                         .tracking(1)
                         .foregroundStyle(Theme.accentText)
                     Text(ex?.name ?? "Nothing open")
-                        .font(.system(size: 22, weight: .heavy))
+                        .font(Theme.font(size: 22, weight: .heavy))
                         .foregroundStyle(Theme.ink)
                 }
                 Spacer(minLength: 0)
@@ -334,7 +334,7 @@ struct FocusCard: View {
                         showClip = true
                     } label: {
                         Image(systemName: "play.fill")
-                            .font(.system(size: 13, weight: .bold))
+                            .font(Theme.font(size: 13, weight: .bold))
                             .frame(width: 36, height: 36)
                             .overlay(Circle().stroke(Theme.fieldBorder, lineWidth: 1))
                             .foregroundStyle(Theme.accentText)
@@ -345,7 +345,7 @@ struct FocusCard: View {
                 if let onCollapse {
                     Button(action: onCollapse) {
                         Image(systemName: "chevron.up")
-                            .font(.system(size: 14, weight: .bold))
+                            .font(Theme.font(size: 14, weight: .bold))
                             .frame(width: 36, height: 36)
                             .overlay(Circle().stroke(Theme.fieldBorder, lineWidth: 1))
                             .foregroundStyle(Theme.sub)
@@ -372,7 +372,7 @@ struct FocusCard: View {
                         }
                     } label: {
                         Image(systemName: "ellipsis")
-                            .font(.system(size: 16, weight: .bold))
+                            .font(Theme.font(size: 16, weight: .bold))
                             .frame(width: 36, height: 36)
                             .overlay(Circle().stroke(Theme.fieldBorder, lineWidth: 1))
                             .foregroundStyle(Theme.sub)
@@ -386,18 +386,18 @@ struct FocusCard: View {
                 if editingNote || !note.isEmpty {
                     HStack(alignment: .top, spacing: 8) {
                         Image(systemName: "note.text")
-                            .font(.system(size: 13, weight: .semibold))
+                            .font(Theme.font(size: 13, weight: .semibold))
                             .foregroundStyle(Theme.accentText)
                             .padding(.top, 2)
                         TextField("Seat height, pin, grip…", text: store.noteBinding(ex.id), axis: .vertical)
-                            .font(.system(size: 14, weight: .medium))
+                            .font(Theme.font(size: 14, weight: .medium))
                             .foregroundStyle(Theme.ink)
                             .lineLimit(1...4)
                             .onSubmit { editingNote = false }
                     }
                     .padding(.horizontal, 12)
                     .padding(.vertical, 10)
-                    .background(Theme.chip, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    .background(Theme.chip, in: RoundedRectangle(cornerRadius: Theme.radius(12), style: .continuous))
                 }
 
                 if !compact {
@@ -407,17 +407,17 @@ struct FocusCard: View {
                 let p = store.prescription(ex.id)
                 HStack(spacing: 8) {
                     Text("Target " + p.short(for: ex))
-                        .font(.system(size: 13, weight: .semibold))
+                        .font(Theme.font(size: 13, weight: .semibold))
                         .padding(.horizontal, 11)
                         .padding(.vertical, 7)
-                        .background(Theme.chip, in: RoundedRectangle(cornerRadius: 11, style: .continuous))
+                        .background(Theme.chip, in: RoundedRectangle(cornerRadius: Theme.radius(11), style: .continuous))
                         .foregroundStyle(Theme.sub)
                     if let w = store.nudgeWeight(ex.id) {
                         Label("Try \(Store.fmt(w)) lb today", systemImage: "arrow.up")
-                            .font(.system(size: 13, weight: .bold))
+                            .font(Theme.font(size: 13, weight: .bold))
                             .padding(.horizontal, 11)
                             .padding(.vertical, 7)
-                            .background(Theme.accentSoft, in: RoundedRectangle(cornerRadius: 11, style: .continuous))
+                            .background(Theme.accentSoft, in: RoundedRectangle(cornerRadius: Theme.radius(11), style: .continuous))
                             .foregroundStyle(Theme.accentText)
                     }
                 }
@@ -426,7 +426,7 @@ struct FocusCard: View {
 
                 if !store.isAvailable(ex.id) && !item.allDone {
                     Text("\(store.missingReason(ex.id)). Swap to finish the remaining sets on something else.")
-                        .font(.system(size: 13, weight: .medium))
+                        .font(Theme.font(size: 13, weight: .medium))
                         .foregroundStyle(Theme.warn)
                 }
 
@@ -470,7 +470,7 @@ private struct SetTable: View {
                 Text(exercise.timed ? "SEC" : "REPS").frame(maxWidth: .infinity)
                 Color.clear.frame(width: 48, height: 1)
             }
-            .font(.system(size: 11, weight: .bold))
+            .font(Theme.font(size: 11, weight: .bold))
             .tracking(0.8)
             .foregroundStyle(Theme.sub)
 
@@ -505,11 +505,11 @@ struct SwipeToDelete<Content: View>: View {
                 onDelete()
             } label: {
                 Image(systemName: "trash.fill")
-                    .font(.system(size: 16, weight: .bold))
+                    .font(Theme.font(size: 16, weight: .bold))
                     .foregroundStyle(Color.white)
                     .frame(width: reveal - 8)
                     .frame(maxHeight: .infinity)
-                    .background(Color.red, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                    .background(Color.red, in: RoundedRectangle(cornerRadius: Theme.radius(14), style: .continuous))
             }
             .buttonStyle(.plain)
             .opacity(offset < -4 ? 1 : 0)
@@ -566,12 +566,12 @@ struct SetRow: View {
     var body: some View {
         HStack(spacing: 8) {
             Text("\(j + 1)")
-                .font(.system(size: 15, weight: .bold))
+                .font(Theme.font(size: 15, weight: .bold))
                 .monospacedDigit()
                 .foregroundStyle(isActive ? Theme.accentText : Theme.sub)
                 .frame(width: 30)
             Text(last)
-                .font(.system(size: 13, weight: .medium))
+                .font(Theme.font(size: 13, weight: .medium))
                 .monospacedDigit()
                 .foregroundStyle(Theme.sub)
                 .lineLimit(1)
@@ -598,13 +598,13 @@ struct SetRow: View {
                 }
             } label: {
                 Image(systemName: "checkmark")
-                    .font(.system(size: 17, weight: .heavy))
+                    .font(Theme.font(size: 17, weight: .heavy))
                     .symbolEffect(.bounce, value: set.done)
                     .frame(width: 48, height: rowHeight)
                     .foregroundStyle(set.done ? Theme.goodInk : Theme.sub)
-                    .background(set.done ? Theme.good : Color.clear, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                    .background(set.done ? Theme.good : Color.clear, in: RoundedRectangle(cornerRadius: Theme.radius(14), style: .continuous))
                     .overlay(
-                        RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        RoundedRectangle(cornerRadius: Theme.radius(14), style: .continuous)
                             .stroke(set.done ? Color.clear : Theme.fieldBorder, lineWidth: 1.5)
                     )
             }
@@ -613,7 +613,7 @@ struct SetRow: View {
         }
         .padding(.vertical, store.data.compact ? 2 : 4)
         .padding(.horizontal, 2)
-        .background(set.done ? Theme.goodRow : Color.clear, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .background(set.done ? Theme.goodRow : Color.clear, in: RoundedRectangle(cornerRadius: Theme.radius(14), style: .continuous))
         .animation(.snappy(duration: 0.25), value: set.done)
     }
 
@@ -626,9 +626,9 @@ struct SetRow: View {
             .font(Theme.num(store.data.compact ? 17 : 19, .bold))
             .foregroundStyle(Theme.ink)
             .frame(maxWidth: .infinity, minHeight: rowHeight)
-            .background(set.done ? Color.clear : Theme.field, in: RoundedRectangle(cornerRadius: 13, style: .continuous))
+            .background(set.done ? Color.clear : Theme.field, in: RoundedRectangle(cornerRadius: Theme.radius(13), style: .continuous))
             .overlay(
-                RoundedRectangle(cornerRadius: 13, style: .continuous)
+                RoundedRectangle(cornerRadius: Theme.radius(13), style: .continuous)
                     .stroke(set.done ? Color.clear : (isActive ? Theme.accent : Theme.fieldBorder), lineWidth: isActive ? 2 : 1)
             )
             .accessibilityLabel(label)
@@ -659,7 +659,7 @@ struct RestBar: View {
                 .accessibilityHidden(true)
                 VStack(alignment: .leading, spacing: 0) {
                     Text("REST")
-                        .font(.system(size: 11, weight: .bold))
+                        .font(Theme.font(size: 11, weight: .bold))
                         .tracking(1)
                         .opacity(0.85)
                     Text(timerInterval: range, countsDown: true)
@@ -667,12 +667,12 @@ struct RestBar: View {
                 }
                 Spacer(minLength: 0)
                 Button("+15s") { rest.add(15) }
-                    .font(.system(size: 15, weight: .bold))
+                    .font(Theme.font(size: 15, weight: .bold))
                     .frame(height: 44)
                     .padding(.horizontal, 14)
                     .background(Theme.accentInk.opacity(0.18), in: Capsule())
                 Button("Skip") { rest.skip() }
-                    .font(.system(size: 15, weight: .bold))
+                    .font(Theme.font(size: 15, weight: .bold))
                     .frame(height: 44)
                     .padding(.horizontal, 16)
                     .background(Theme.accentInk, in: Capsule())
@@ -683,7 +683,7 @@ struct RestBar: View {
             .padding(.vertical, 12)
             .padding(.leading, 16)
             .padding(.trailing, 12)
-            .background(Theme.accent, in: RoundedRectangle(cornerRadius: 28, style: .continuous))
+            .background(Theme.accent, in: RoundedRectangle(cornerRadius: Theme.radius(28), style: .continuous))
             .shadow(color: Theme.shadow, radius: 18, y: 8)
         }
     }
@@ -701,7 +701,7 @@ struct RestRing: View {
             HStack(spacing: 16) {
                 Button { rest.add(15) } label: {
                     Text("+15s")
-                        .font(.system(size: 15, weight: .bold))
+                        .font(Theme.font(size: 15, weight: .bold))
                         .frame(width: 64, height: 64)
                         .background(Theme.accentSoft, in: Circle())
                         .foregroundStyle(Theme.accentText)
@@ -721,7 +721,7 @@ struct RestRing: View {
                     .accessibilityHidden(true)
                     VStack(spacing: 0) {
                         Text("REST")
-                            .font(.system(size: 11, weight: .bold))
+                            .font(Theme.font(size: 11, weight: .bold))
                             .tracking(1)
                             .foregroundStyle(Theme.sub)
                         Text(timerInterval: range, countsDown: true)
@@ -734,7 +734,7 @@ struct RestRing: View {
                 .frame(width: 148, height: 148)
                 Button { rest.skip() } label: {
                     Text("Skip")
-                        .font(.system(size: 15, weight: .bold))
+                        .font(Theme.font(size: 15, weight: .bold))
                         .frame(width: 64, height: 64)
                         .background(Theme.accent, in: Circle())
                         .foregroundStyle(Theme.accentInk)
@@ -743,8 +743,8 @@ struct RestRing: View {
             .buttonStyle(.plain)
             .padding(.vertical, 16)
             .frame(maxWidth: .infinity)
-            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 34, style: .continuous))
-            .overlay(RoundedRectangle(cornerRadius: 34, style: .continuous).stroke(Theme.cardBorder, lineWidth: 1))
+            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: Theme.radius(34), style: .continuous))
+            .overlay(RoundedRectangle(cornerRadius: Theme.radius(34), style: .continuous).stroke(Theme.cardBorder, lineWidth: 1))
             .shadow(color: Theme.shadow, radius: 18, y: 8)
         }
     }

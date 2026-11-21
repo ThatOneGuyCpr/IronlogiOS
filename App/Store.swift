@@ -1,6 +1,7 @@
 import Foundation
 import SwiftUI
 import WidgetKit
+import UIKit
 
 // MARK: - Saved data
 
@@ -112,6 +113,12 @@ struct AppData: Codable {
     var compact = false
     /// Game icons unlock as you train. Off means every icon is open.
     var unlockIcons = false
+    /// Whole-app theme. Glacier is the original look.
+    var skin: String = "glacier"
+    /// "theme" keeps the skin's own color, or a palette id replaces it.
+    var skinColor: String = "theme"
+    /// Picking a theme also switches to its matching icon.
+    var skinIcon = true
     /// Equipment this save has already seen. New equipment added in an update starts out open.
     var knownEquipment: [String] = Equipment.allCases.map { $0.rawValue }
     /// Program, days per week, set days and muscle focus.
@@ -157,6 +164,9 @@ struct AppData: Codable {
         restStyle = try c.decodeIfPresent(String.self, forKey: .restStyle) ?? d.restStyle
         compact = try c.decodeIfPresent(Bool.self, forKey: .compact) ?? d.compact
         unlockIcons = try c.decodeIfPresent(Bool.self, forKey: .unlockIcons) ?? d.unlockIcons
+        skin = try c.decodeIfPresent(String.self, forKey: .skin) ?? d.skin
+        skinColor = try c.decodeIfPresent(String.self, forKey: .skinColor) ?? d.skinColor
+        skinIcon = try c.decodeIfPresent(Bool.self, forKey: .skinIcon) ?? d.skinIcon
     }
 }
 
@@ -186,8 +196,9 @@ final class Store: ObservableObject {
     @Published var data: AppData {
         didSet {
             scheduleSave()
-            if data.accent != oldValue.accent || data.background != oldValue.background || data.numberStyle != oldValue.numberStyle {
-                applyLook(accentChanged: data.accent != oldValue.accent)
+            if data.accent != oldValue.accent || data.background != oldValue.background || data.numberStyle != oldValue.numberStyle
+                || data.skin != oldValue.skin || data.skinColor != oldValue.skinColor {
+                applyLook(accentChanged: data.accent != oldValue.accent || data.skin != oldValue.skin || data.skinColor != oldValue.skinColor)
             }
         }
     }
@@ -201,6 +212,8 @@ final class Store: ObservableObject {
     @Published var changes: [EquipmentChange] = []
     /// Shown as a summary sheet after finishing.
     @Published var lastFinished: HistoryEntry?
+    /// The theme picker, shown above the app so it stays open while the look changes.
+    @Published var showThemes = false
 
     private var saveTask: Task<Void, Never>?
 
@@ -215,16 +228,35 @@ final class Store: ObservableObject {
     /// Pushes the look settings to the theme and shares the color with the widgets.
     func applyLook(accentChanged: Bool) {
         Palette.current = Palette.named(data.accent)
+        Skin.current = Skin.named(data.skin)
+        Skin.accentOverride = data.skinColor == "theme" ? nil : Palette.named(data.skinColor)
         Theme.backgroundStyle = BackgroundStyle(rawValue: data.background) ?? .sky
         Theme.numberStyle = NumberStyle(rawValue: data.numberStyle) ?? .standard
+        styleNavigationBars()
         if accentChanged {
             SharedStore.defaults.set(Palette.current.id, forKey: Palette.defaultsKey)
+            SharedStore.defaults.set(Skin.current.id, forKey: Skin.defaultsKey)
+            SharedStore.defaults.set(data.skinColor, forKey: Skin.colorKey)
             WidgetCenter.shared.reloadAllTimelines()
         }
     }
 
+    /// Navigation titles use the skin's type and the color that reads on its background.
+    private func styleNavigationBars() {
+        let skin = Skin.current
+        let bar = UINavigationBar.appearance()
+        if skin.isGlacier {
+            bar.largeTitleTextAttributes = nil
+            bar.titleTextAttributes = nil
+            return
+        }
+        let head = skin.colors?.head.uiColor ?? .label
+        bar.largeTitleTextAttributes = [.font: skin.display.uiFont(32, .heavy), .foregroundColor: head]
+        bar.titleTextAttributes = [.font: skin.label.uiFont(17, .bold), .foregroundColor: head]
+    }
+
     /// Changes everything that depends on the look in one go, so views rebuild once.
-    var lookID: String { data.accent + data.background + data.numberStyle }
+    var lookID: String { data.accent + data.background + data.numberStyle + data.skin + data.skinColor }
 
     // MARK: Persistence
 

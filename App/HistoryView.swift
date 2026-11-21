@@ -20,7 +20,7 @@ struct HistoryView: View {
                             } label: {
                                 HistoryRow(entry: entry, records: store.records(for: entry).count)
                             }
-                            .listRowBackground(Color.clear)
+                            .listRowBackground(Theme.row ?? Color.clear)
                         }
                         .onDelete { offsets in
                             let ids = offsets.map { store.data.history[$0].id }
@@ -31,7 +31,7 @@ struct HistoryView: View {
                 }
             }
             .background { SkyBackground() }
-            .navigationTitle("History")
+            .navigationTitle(Theme.skin.isGlacier ? "History" : Theme.words.tabs[2])
         }
     }
 }
@@ -47,7 +47,7 @@ private struct HistoryRow: View {
                     Text(entry.routine.title).font(.headline)
                     if records > 0 {
                         Label("\(records)", systemImage: "trophy.fill")
-                            .font(.system(size: 12, weight: .bold))
+                            .font(Theme.font(size: 12, weight: .bold))
                             .foregroundStyle(Theme.accentText)
                             .accessibilityLabel(records.counted("record"))
                     }

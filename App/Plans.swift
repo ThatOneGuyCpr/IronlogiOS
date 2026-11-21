@@ -15,14 +15,14 @@ struct ProgramsView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 14) {
                     Text("Pick a starting point. You can change days and focus after.")
-                        .font(.system(size: 14))
+                        .font(Theme.font(size: 14))
                         .foregroundStyle(Theme.sub)
 
                     ScrollView(.horizontal, showsIndicators: false) {
                         HStack(spacing: 6) {
                             ForEach(filters, id: \.self) { f in
                                 Button(f) { withAnimation(.snappy) { filter = f } }
-                                    .font(.system(size: 13, weight: .bold))
+                                    .font(Theme.font(size: 13, weight: .bold))
                                     .padding(.horizontal, 12)
                                     .frame(height: 34)
                                     .background(filter == f ? Theme.ink : Theme.card, in: Capsule())
@@ -39,22 +39,22 @@ struct ProgramsView: View {
                     } label: {
                         HStack(spacing: 12) {
                             Image(systemName: "slider.horizontal.3")
-                                .font(.system(size: 18, weight: .semibold))
+                                .font(Theme.font(size: 18, weight: .semibold))
                                 .frame(width: 40, height: 40)
-                                .background(Theme.accentSoft, in: RoundedRectangle(cornerRadius: 13, style: .continuous))
+                                .background(Theme.accentSoft, in: RoundedRectangle(cornerRadius: Theme.radius(13), style: .continuous))
                                 .foregroundStyle(Theme.accentText)
                             VStack(alignment: .leading, spacing: 2) {
-                                Text("Build your own").font(.system(size: 16, weight: .bold)).foregroundStyle(Theme.ink)
+                                Text("Build your own").font(Theme.font(size: 16, weight: .bold)).foregroundStyle(Theme.ink)
                                 Text("Set days per week and which muscles to grow")
-                                    .font(.system(size: 13))
+                                    .font(Theme.font(size: 13))
                                     .foregroundStyle(Theme.sub)
                             }
                             Spacer(minLength: 0)
-                            Image(systemName: "chevron.right").font(.system(size: 13, weight: .bold)).foregroundStyle(Theme.sub)
+                            Image(systemName: "chevron.right").font(Theme.font(size: 13, weight: .bold)).foregroundStyle(Theme.sub)
                         }
                         .padding(14)
-                        .background(Theme.card.opacity(0.6), in: RoundedRectangle(cornerRadius: 20, style: .continuous))
-                        .overlay(RoundedRectangle(cornerRadius: 20, style: .continuous).strokeBorder(Theme.accent.opacity(0.5), style: StrokeStyle(lineWidth: 1.5, dash: [5, 4])))
+                        .background(Theme.card.opacity(0.6), in: RoundedRectangle(cornerRadius: Theme.radius(20), style: .continuous))
+                        .overlay(RoundedRectangle(cornerRadius: Theme.radius(20), style: .continuous).strokeBorder(Theme.accent.opacity(0.5), style: StrokeStyle(lineWidth: 1.5, dash: [5, 4])))
                     }
                     .buttonStyle(.plain)
 
@@ -95,31 +95,31 @@ private struct ProgramCard: View {
         let plan = Plan.standard(program)
         VStack(alignment: .leading, spacing: 9) {
             HStack(spacing: 8) {
-                Text(program.name).font(.system(size: 16, weight: .bold)).foregroundStyle(Theme.ink)
+                Text(program.name).font(Theme.font(size: 16, weight: .bold)).foregroundStyle(Theme.ink)
                 Spacer(minLength: 0)
                 if current {
                     Text("CURRENT")
-                        .font(.system(size: 10, weight: .heavy)).tracking(0.8)
+                        .font(Theme.font(size: 10, weight: .heavy)).tracking(0.8)
                         .padding(.horizontal, 8).padding(.vertical, 4)
                         .background(Theme.accent, in: Capsule())
                         .foregroundStyle(Theme.accentInk)
                 }
                 Text(program.daysLabel)
-                    .font(.system(size: 12, weight: .bold))
+                    .font(Theme.font(size: 12, weight: .bold))
                     .padding(.horizontal, 8).padding(.vertical, 4)
                     .background(Theme.accentSoft, in: Capsule())
                     .foregroundStyle(Theme.accentText)
             }
             Text(program.blurb)
-                .font(.system(size: 13))
+                .font(Theme.font(size: 13))
                 .foregroundStyle(Theme.sub)
                 .multilineTextAlignment(.leading)
                 .fixedSize(horizontal: false, vertical: true)
             WeekPattern(plan: plan, compact: true)
         }
         .padding(14)
-        .background(Theme.card, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: 20, style: .continuous).stroke(current ? Theme.accent : Theme.cardBorder, lineWidth: current ? 1.5 : 1))
+        .background(Theme.card, in: RoundedRectangle(cornerRadius: Theme.radius(20), style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: Theme.radius(20), style: .continuous).stroke(current ? Theme.accent : Theme.cardBorder, lineWidth: current ? 1.5 : 1))
         .accessibilityElement(children: .combine)
     }
 }
@@ -138,10 +138,10 @@ struct WeekPattern: View {
             ForEach(0..<7, id: \.self) { i in
                 VStack(spacing: 4) {
                     if !compact {
-                        Text(letters[i]).font(.system(size: 11, weight: .semibold)).foregroundStyle(Theme.sub)
+                        Text(letters[i]).font(Theme.font(size: 11, weight: .semibold)).foregroundStyle(Theme.sub)
                     }
                     Text(cells[i]?.glyph ?? "")
-                        .font(.system(size: compact ? 10 : 11, weight: .heavy))
+                        .font(Theme.font(size: compact ? 10 : 11, weight: .heavy))
                         .frame(maxWidth: .infinity, minHeight: compact ? 22 : 30)
                         .background(cells[i] == nil ? Theme.faint : Theme.accent, in: RoundedRectangle(cornerRadius: compact ? 7 : 10, style: .continuous))
                         .foregroundStyle(Theme.accentInk)
@@ -184,7 +184,7 @@ struct ProgramDetailView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 14) {
                 Text(program.blurb)
-                    .font(.system(size: 15))
+                    .font(Theme.font(size: 15))
                     .foregroundStyle(Theme.sub)
 
                 if program.dayOptions.count > 1 {
@@ -199,12 +199,12 @@ struct ProgramDetailView: View {
                         SectionTitle("Your week")
                         Spacer()
                         Text(plan.isFixed ? plan.weekdayText : "Any \(plan.days) days")
-                            .font(.system(size: 13, weight: .semibold))
+                            .font(Theme.font(size: 13, weight: .semibold))
                             .foregroundStyle(Theme.accentText)
                     }
                     WeekPattern(plan: plan)
                     Text(sessionLine(plan))
-                        .font(.system(size: 12))
+                        .font(Theme.font(size: 12))
                         .foregroundStyle(Theme.sub)
                 }
                 .glacierCard(padding: 14)
@@ -213,11 +213,11 @@ struct ProgramDetailView: View {
 
                 if let note = program.note ?? warning(plan) {
                     Label(note, systemImage: "info.circle")
-                        .font(.system(size: 13))
+                        .font(Theme.font(size: 13))
                         .foregroundStyle(Theme.ink)
                         .padding(12)
                         .frame(maxWidth: .infinity, alignment: .leading)
-                        .background(Theme.promptBg, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                        .background(Theme.promptBg, in: RoundedRectangle(cornerRadius: Theme.radius(14), style: .continuous))
                 }
 
                 HStack(spacing: 10) {
@@ -287,7 +287,7 @@ struct SetsCard: View {
                 SectionTitle("Sets per muscle, per week")
                 Spacer()
                 Text("shaded: 10–20 to grow")
-                    .font(.system(size: 11, weight: .semibold))
+                    .font(Theme.font(size: 11, weight: .semibold))
                     .foregroundStyle(Theme.sub)
             }
             ForEach(Muscle.allCases) { m in
@@ -295,7 +295,7 @@ struct SetsCard: View {
                 let diff = v - (now[m] ?? 0)
                 HStack(spacing: 8) {
                     Text(m.name)
-                        .font(.system(size: 12, weight: .semibold))
+                        .font(Theme.font(size: 12, weight: .semibold))
                         .foregroundStyle(Theme.ink)
                         .frame(width: 92, alignment: .leading)
                     GeometryReader { geo in
@@ -316,7 +316,7 @@ struct SetsCard: View {
                         .foregroundStyle(Theme.ink)
                         .frame(width: 22, alignment: .trailing)
                     Text(same ? "" : diff == 0 ? "same" : (diff > 0 ? "+\(diff)" : "\(diff)"))
-                        .font(.system(size: 11, weight: .bold))
+                        .font(Theme.font(size: 11, weight: .bold))
                         .foregroundStyle(diff < 0 ? Theme.warn : Theme.sub)
                         .frame(width: 36, alignment: .leading)
                 }
@@ -325,7 +325,7 @@ struct SetsCard: View {
             }
             if !same {
                 Text("Compared with your current plan.")
-                    .font(.system(size: 11))
+                    .font(Theme.font(size: 11))
                     .foregroundStyle(Theme.sub)
             }
         }
@@ -386,7 +386,7 @@ struct PlanBuilderView: View {
     private var daysSection: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("DAYS PER WEEK")
-                .font(.system(size: 12, weight: .bold)).tracking(0.6)
+                .font(Theme.font(size: 12, weight: .bold)).tracking(0.6)
                 .foregroundStyle(Theme.sub)
             HStack(spacing: 6) {
                 ForEach(allowedDays, id: \.self) { n in
@@ -399,9 +399,9 @@ struct PlanBuilderView: View {
                         Text("\(n)")
                             .font(Theme.num(18))
                             .frame(maxWidth: .infinity, minHeight: 46)
-                            .background(plan.days == n ? Theme.accent : Theme.card, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                            .background(plan.days == n ? Theme.accent : Theme.card, in: RoundedRectangle(cornerRadius: Theme.radius(14), style: .continuous))
                             .foregroundStyle(plan.days == n ? Theme.accentInk : Theme.ink)
-                            .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).stroke(Theme.cardBorder, lineWidth: 1))
+                            .overlay(RoundedRectangle(cornerRadius: Theme.radius(14), style: .continuous).stroke(Theme.cardBorder, lineWidth: 1))
                     }
                     .buttonStyle(.plain)
                     .accessibilityLabel("\(n) days")
@@ -409,7 +409,7 @@ struct PlanBuilderView: View {
                 }
             }
             Text("\(plan.splitName) · about \(PlanMath.minutes(plan, store: store)) min a session")
-                .font(.system(size: 13, weight: .semibold))
+                .font(Theme.font(size: 13, weight: .semibold))
                 .foregroundStyle(Theme.sub)
         }
     }
@@ -436,11 +436,11 @@ struct PlanBuilderView: View {
                             toggle(day)
                         } label: {
                             Text(letters[i])
-                                .font(.system(size: 14, weight: .heavy))
+                                .font(Theme.font(size: 14, weight: .heavy))
                                 .frame(maxWidth: .infinity, minHeight: 40)
-                                .background(on ? Theme.accent : Theme.card, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                                .background(on ? Theme.accent : Theme.card, in: RoundedRectangle(cornerRadius: Theme.radius(12), style: .continuous))
                                 .foregroundStyle(on ? Theme.accentInk : Theme.sub)
-                                .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).stroke(Theme.cardBorder, lineWidth: 1))
+                                .overlay(RoundedRectangle(cornerRadius: Theme.radius(12), style: .continuous).stroke(Theme.cardBorder, lineWidth: 1))
                         }
                         .buttonStyle(.plain)
                         .accessibilityLabel(Plan.weekdayNames[day])
@@ -448,11 +448,11 @@ struct PlanBuilderView: View {
                     }
                 }
                 Text(wd.count == plan.days ? "Other days show as rest days." : "Pick \(plan.days) days (\(wd.count) picked).")
-                    .font(.system(size: 12))
+                    .font(Theme.font(size: 12))
                     .foregroundStyle(wd.count == plan.days ? Theme.sub : Theme.warn)
             } else {
                 Text("No set days. The week counts up to \(plan.days) and the next workout waits for you.")
-                    .font(.system(size: 12))
+                    .font(Theme.font(size: 12))
                     .foregroundStyle(Theme.sub)
             }
         }
@@ -474,14 +474,14 @@ struct PlanBuilderView: View {
                 SectionTitle("Focus")
                 Spacer()
                 Text(plan.growCount >= 3 ? "Grow up to 3 at once" : "Grow adds a set · Light takes one off")
-                    .font(.system(size: 12, weight: .semibold))
+                    .font(Theme.font(size: 12, weight: .semibold))
                     .foregroundStyle(plan.growCount >= 3 ? Theme.warn : Theme.sub)
             }
             .padding(.bottom, 6)
             ForEach(Muscle.allCases) { m in
                 HStack(spacing: 8) {
                     Text(m.name)
-                        .font(.system(size: 14, weight: .semibold))
+                        .font(Theme.font(size: 14, weight: .semibold))
                         .foregroundStyle(Theme.ink)
                     Spacer(minLength: 4)
                     HStack(spacing: 2) {
@@ -492,10 +492,10 @@ struct PlanBuilderView: View {
                                 withAnimation(.snappy) { plan.focus[m.rawValue] = f == .keep ? nil : f }
                             } label: {
                                 Text(f.label)
-                                    .font(.system(size: 12, weight: .bold))
+                                    .font(Theme.font(size: 12, weight: .bold))
                                     .padding(.horizontal, 10)
                                     .frame(minHeight: 30)
-                                    .background(on ? (f == .grow ? Theme.accent : Theme.card) : Color.clear, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+                                    .background(on ? (f == .grow ? Theme.accent : Theme.card) : Color.clear, in: RoundedRectangle(cornerRadius: Theme.radius(8), style: .continuous))
                                     .foregroundStyle(on ? (f == .grow ? Theme.accentInk : Theme.ink) : (blocked ? Theme.sub.opacity(0.4) : Theme.sub))
                             }
                             .buttonStyle(.plain)
@@ -505,7 +505,7 @@ struct PlanBuilderView: View {
                         }
                     }
                     .padding(2)
-                    .background(Theme.chip, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                    .background(Theme.chip, in: RoundedRectangle(cornerRadius: Theme.radius(10), style: .continuous))
                 }
                 .padding(.vertical, 5)
                 .overlay(alignment: .top) { Rectangle().fill(Theme.faint).frame(height: 1) }

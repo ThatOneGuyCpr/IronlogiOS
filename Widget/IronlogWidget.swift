@@ -20,18 +20,32 @@ enum WP {
         })
     }
 
-    static let ink = dyn(0x0B1B2E, 0xF2F6FB)
-    static let sub = dyn(0x4A5D73, 0xA9B8CA)
+    /// The theme picked in the app. Glacier follows light and dark; other themes are fixed.
+    static var skin: Skin { Skin.stored }
+    private static var sc: SkinColors? { skin.colors }
+
+    static var ink: Color { sc?.widgetInk.color ?? dyn(0x0B1B2E, 0xF2F6FB) }
+    static var sub: Color { sc?.widgetSub.color ?? dyn(0x4A5D73, 0xA9B8CA) }
     // Accent follows the color picked in the app.
-    static var accent: Color { Palette.stored.accentColor }
-    static var accentInk: Color { Palette.stored.accentInkColor }
-    static let faint = dyn(0xDCE6F1, 0xFFFFFF, da: 0.12)
-    static let inner = dyn(0xEEF4FB, 0xFFFFFF, da: 0.07)
-    static let rule = dyn(0xDCE6F1, 0xFFFFFF, da: 0.10)
-    static let good = dyn(0x15803D, 0x5BD68A)
-    static let outline = dyn(0xCCDAEA, 0xFFFFFF, da: 0.2)
-    static var top: Color { Palette.stored.widgetTopColor }
-    static var bottom: Color { Palette.stored.widgetBottomColor }
+    static var accent: Color {
+        if let p = Skin.storedOverride, sc != nil { return Color(UIColor(widgetHex: skin.scheme == .dark ? p.accent.1 : p.accent.0)) }
+        return sc?.widgetAccent.color ?? Palette.stored.accentColor
+    }
+    static var accentInk: Color {
+        if let p = Skin.storedOverride, sc != nil { return Color(UIColor(widgetHex: skin.scheme == .dark ? p.accentInk.1 : p.accentInk.0)) }
+        return sc?.widgetAccentInk.color ?? Palette.stored.accentInkColor
+    }
+    static var faint: Color { sc?.widgetFaint.color ?? dyn(0xDCE6F1, 0xFFFFFF, da: 0.12) }
+    static var inner: Color { sc.map { $0.widgetFaint.color.opacity(0.5) } ?? dyn(0xEEF4FB, 0xFFFFFF, da: 0.07) }
+    static var rule: Color { sc?.widgetFaint.color ?? dyn(0xDCE6F1, 0xFFFFFF, da: 0.10) }
+    static var good: Color { sc?.good.color ?? dyn(0x15803D, 0x5BD68A) }
+    static var outline: Color { sc?.widgetFaint.color ?? dyn(0xCCDAEA, 0xFFFFFF, da: 0.2) }
+    static var top: Color { sc?.widgetTop.color ?? Palette.stored.widgetTopColor }
+    static var bottom: Color { sc?.widgetBottom.color ?? Palette.stored.widgetBottomColor }
+
+    static func font(size: CGFloat, weight: Font.Weight = .regular, design: Font.Design = .default) -> Font {
+        skin.font(size: size, weight: weight, design: design)
+    }
 }
 
 struct WidgetSky: View {
@@ -46,7 +60,7 @@ private struct Caption: View {
 
     var body: some View {
         Text(text)
-            .font(.system(size: 11, weight: .bold))
+            .font(WP.font(size: 11, weight: .bold))
             .tracking(0.8)
             .foregroundStyle(WP.sub)
             .lineLimit(1)
@@ -60,7 +74,7 @@ private struct StartPill: View {
 
     var body: some View {
         Text(title)
-            .font(.system(size: 13, weight: .bold))
+            .font(WP.font(size: 13, weight: .bold))
             .frame(maxWidth: .infinity, minHeight: height)
             .background(filled ? WP.accent : Color.clear, in: Capsule())
             .overlay(Capsule().stroke(filled ? Color.clear : WP.outline, lineWidth: 1))
@@ -135,7 +149,7 @@ struct WeekWidgetView: View {
                         .padding(5)
                         .widgetAccentable()
                     Text("\(count)/\(snap.weeklyTarget)")
-                        .font(.system(size: 15, weight: .bold))
+                        .font(WP.font(size: 15, weight: .bold))
                 }
             } else {
                 Gauge(value: Double(min(count, snap.weeklyTarget)), in: 0...Double(max(1, snap.weeklyTarget))) {
@@ -178,11 +192,11 @@ private struct MediumWeek: View {
                 Spacer(minLength: 0)
                 HStack(alignment: .firstTextBaseline, spacing: 4) {
                     Text("\(count)")
-                        .font(.system(size: 64, weight: .heavy))
+                        .font(WP.font(size: 64, weight: .heavy))
                         .foregroundStyle(WP.accent)
                         .minimumScaleFactor(0.6)
                     Text("/ \(snap.weeklyTarget)")
-                        .font(.system(size: 17, weight: .bold))
+                        .font(WP.font(size: 17, weight: .bold))
                         .foregroundStyle(WP.sub)
                 }
                 Spacer(minLength: 0)
@@ -206,26 +220,26 @@ private struct MediumWeek: View {
                 Spacer(minLength: 0)
                 if let last = snap.last {
                     Text(last.routine.title)
-                        .font(.system(size: 20, weight: .heavy))
+                        .font(WP.font(size: 20, weight: .heavy))
                         .foregroundStyle(WP.ink)
                     Text(last.date.formatted(.dateTime.weekday(.abbreviated).month(.abbreviated).day()) + " · " + WidgetSnapshot.relativeDay(last.date, now: entry.date))
-                        .font(.system(size: 13, weight: .semibold))
+                        .font(WP.font(size: 13, weight: .semibold))
                         .foregroundStyle(WP.sub)
                         .lineLimit(1)
                         .minimumScaleFactor(0.8)
                     Spacer(minLength: 0)
                     Text("\(last.minutes) min · " + last.sets.counted("set") + " · \(last.volume.formatted(.number.precision(.fractionLength(0)))) lb")
-                        .font(.system(size: 12, weight: .semibold))
+                        .font(WP.font(size: 12, weight: .semibold))
                         .foregroundStyle(WP.sub)
                         .lineLimit(1)
                         .minimumScaleFactor(0.8)
                 } else {
                     Text("No workouts yet")
-                        .font(.system(size: 17, weight: .bold))
+                        .font(WP.font(size: 17, weight: .bold))
                         .foregroundStyle(WP.ink)
                     Spacer(minLength: 0)
                     Text("\(snap.next.title) is up first")
-                        .font(.system(size: 12, weight: .semibold))
+                        .font(WP.font(size: 12, weight: .semibold))
                         .foregroundStyle(WP.sub)
                 }
             }
@@ -247,7 +261,7 @@ private struct WeekRing: View {
                 .stroke(WP.accent, style: StrokeStyle(lineWidth: 9, lineCap: .round))
                 .rotationEffect(.degrees(-90))
             Text("\(count)/\(target)")
-                .font(.system(size: 20, weight: .heavy))
+                .font(WP.font(size: 20, weight: .heavy))
                 .foregroundStyle(WP.ink)
         }
         .frame(width: 74, height: 74)
@@ -293,12 +307,12 @@ private struct SlotCircle: View {
                     Circle().strokeBorder(WP.sub.opacity(0.45), style: StrokeStyle(lineWidth: 1.5, dash: [3, 2.5]))
                 }
                 Text(slot.glyph)
-                    .font(.system(size: 11, weight: .heavy))
+                    .font(WP.font(size: 11, weight: .heavy))
                     .foregroundStyle(slot.state == .done ? WP.accentInk : (slot.state == .today ? WP.accent : WP.sub))
             }
             .frame(width: 32, height: 32)
             Text(slot.label.isEmpty ? " " : slot.label)
-                .font(.system(size: 10, weight: slot.state == .today ? .heavy : .bold))
+                .font(WP.font(size: 10, weight: slot.state == .today ? .heavy : .bold))
                 .foregroundStyle(slot.state == .today ? WP.accent : WP.sub)
         }
     }
@@ -317,10 +331,10 @@ private struct SlotsMedium: View {
                 Caption("THIS WEEK")
                 HStack(alignment: .firstTextBaseline, spacing: 3) {
                     Text("\(count)")
-                        .font(.system(size: 46, weight: .heavy))
+                        .font(WP.font(size: 46, weight: .heavy))
                         .foregroundStyle(WP.accent)
                     Text("/ \(snap.weeklyTarget)")
-                        .font(.system(size: 17, weight: .bold))
+                        .font(WP.font(size: 17, weight: .bold))
                         .foregroundStyle(WP.sub)
                 }
                 Spacer(minLength: 0)
@@ -336,18 +350,18 @@ private struct SlotsMedium: View {
                 if rest {
                     Caption("REST DAY")
                     Text("Next: \(snap.next.title)")
-                        .font(.system(size: 18, weight: .heavy))
+                        .font(WP.font(size: 18, weight: .heavy))
                         .foregroundStyle(WP.ink)
                         .lineLimit(2)
                         .minimumScaleFactor(0.8)
                         .padding(.top, 4)
                     Text(snap.nextPlannedDate(after: entry.date)?.formatted(.dateTime.weekday(.wide)) ?? "")
-                        .font(.system(size: 12, weight: .semibold))
+                        .font(WP.font(size: 12, weight: .semibold))
                         .foregroundStyle(WP.sub)
                     Spacer(minLength: 0)
                     if let last = snap.last {
                         Text("Last: \(last.routine.title), \(WidgetSnapshot.relativeDay(last.date, now: entry.date).lowercased())")
-                            .font(.system(size: 11, weight: .semibold))
+                            .font(WP.font(size: 11, weight: .semibold))
                             .foregroundStyle(WP.sub)
                             .lineLimit(1)
                             .minimumScaleFactor(0.8)
@@ -355,13 +369,13 @@ private struct SlotsMedium: View {
                 } else {
                     Caption(snap.trainedToday(entry.date) ? "UP NEXT" : "TODAY")
                     Text(snap.next.title)
-                        .font(.system(size: 18, weight: .heavy))
+                        .font(WP.font(size: 18, weight: .heavy))
                         .foregroundStyle(WP.ink)
                         .lineLimit(2)
                         .minimumScaleFactor(0.8)
                         .padding(.top, 4)
                     Text(snap.nextCount.counted("exercise"))
-                        .font(.system(size: 12, weight: .semibold))
+                        .font(WP.font(size: 12, weight: .semibold))
                         .foregroundStyle(WP.sub)
                     Spacer(minLength: 0)
                     Link(destination: Links.start) {
@@ -390,7 +404,7 @@ private struct TwoDayMedium: View {
                 Caption("THIS WEEK")
                 Spacer()
                 Text("\(min(weekDone.count, snap.weeklyTarget)) of \(snap.weeklyTarget)")
-                    .font(.system(size: 13, weight: .heavy))
+                    .font(WP.font(size: 13, weight: .heavy))
                     .foregroundStyle(WP.accent)
             }
             HStack(spacing: 10) {
@@ -410,16 +424,16 @@ private struct TwoDayMedium: View {
         let head = (slot.label.isEmpty ? "NEXT" : slot.label.uppercased()) + (isDone ? " · DONE" : slot.state == .today ? " · TODAY" : "")
         return VStack(alignment: .leading, spacing: 3) {
             Text(head)
-                .font(.system(size: 10, weight: .heavy))
+                .font(WP.font(size: 10, weight: .heavy))
                 .foregroundStyle(isDone ? WP.accentInk.opacity(0.85) : WP.sub)
             Text(title)
-                .font(.system(size: 15, weight: .heavy))
+                .font(WP.font(size: 15, weight: .heavy))
                 .foregroundStyle(isDone ? WP.accentInk : WP.ink)
                 .lineLimit(2)
                 .minimumScaleFactor(0.8)
             Spacer(minLength: 0)
             Text(workout.map { "\($0.minutes) min · " + $0.sets.counted("set") } ?? "Up next")
-                .font(.system(size: 11, weight: .semibold))
+                .font(WP.font(size: 11, weight: .semibold))
                 .foregroundStyle(isDone ? WP.accentInk.opacity(0.9) : WP.sub)
                 .lineLimit(1)
         }
@@ -450,7 +464,7 @@ private struct LargeOverview: View {
                     ZStack {
                         SegmentedRing(count: count, target: snap.weeklyTarget, lineWidth: 9, on: WP.accent, off: WP.faint)
                         Text("\(count)/\(snap.weeklyTarget)")
-                            .font(.system(size: 20, weight: .heavy))
+                            .font(WP.font(size: 20, weight: .heavy))
                             .foregroundStyle(WP.ink)
                     }
                     .frame(width: 74, height: 74)
@@ -460,10 +474,10 @@ private struct LargeOverview: View {
                 VStack(alignment: .leading, spacing: 2) {
                     Caption("THIS WEEK")
                     Text(left == 0 ? "Week done" : left == 1 ? "One to go" : "\(left) to go")
-                        .font(.system(size: 18, weight: .heavy))
+                        .font(WP.font(size: 18, weight: .heavy))
                         .foregroundStyle(WP.ink)
                     Text("\(snap.streak(entry.date))-week streak")
-                        .font(.system(size: 13))
+                        .font(WP.font(size: 13))
                         .foregroundStyle(WP.sub)
                 }
             }
@@ -472,14 +486,14 @@ private struct LargeOverview: View {
                 Caption("LAST WORKOUT")
                 if let last = snap.last {
                     Text("\(last.routine.title) · \(WidgetSnapshot.relativeDay(last.date, now: entry.date))")
-                        .font(.system(size: 15, weight: .bold))
+                        .font(WP.font(size: 15, weight: .bold))
                         .foregroundStyle(WP.ink)
                     Text("\(last.minutes) min · " + last.sets.counted("set"))
-                        .font(.system(size: 12))
+                        .font(WP.font(size: 12))
                         .foregroundStyle(WP.sub)
                 } else {
                     Text("No workouts yet")
-                        .font(.system(size: 15, weight: .bold))
+                        .font(WP.font(size: 15, weight: .bold))
                         .foregroundStyle(WP.ink)
                 }
             }
@@ -494,11 +508,11 @@ private struct LargeOverview: View {
                         .foregroundStyle(WP.accent)
                     VStack(alignment: .leading, spacing: 1) {
                         Text("New record: \(r.name)")
-                            .font(.system(size: 13, weight: .bold))
+                            .font(WP.font(size: 13, weight: .bold))
                             .foregroundStyle(WP.ink)
                             .lineLimit(1)
                         Text(r.text)
-                            .font(.system(size: 12))
+                            .font(WP.font(size: 12))
                             .foregroundStyle(WP.sub)
                     }
                 }
@@ -514,7 +528,7 @@ private struct LargeOverview: View {
                 VStack(alignment: .leading, spacing: 1) {
                     Caption("UP NEXT")
                     Text(snap.next.title)
-                        .font(.system(size: 17, weight: .heavy))
+                        .font(WP.font(size: 17, weight: .heavy))
                         .foregroundStyle(WP.ink)
                 }
                 Spacer()
@@ -559,16 +573,16 @@ struct NextWorkoutView: View {
         case .systemSmall where snap.isRestDay(entry.date):
             VStack(alignment: .leading, spacing: 0) {
                 Image(systemName: "moon.fill")
-                    .font(.system(size: 20, weight: .semibold))
+                    .font(WP.font(size: 20, weight: .semibold))
                     .foregroundStyle(WP.sub)
                 Text("Rest day")
-                    .font(.system(size: 22, weight: .heavy))
+                    .font(WP.font(size: 22, weight: .heavy))
                     .foregroundStyle(WP.ink)
                     .padding(.top, 6)
                 Spacer(minLength: 0)
                 Caption("NEXT · " + (snap.nextPlannedDate(after: entry.date)?.formatted(.dateTime.weekday(.abbreviated)).uppercased() ?? ""))
                 Text(snap.next.title)
-                    .font(.system(size: 15, weight: .bold))
+                    .font(WP.font(size: 15, weight: .bold))
                     .foregroundStyle(WP.ink)
                     .lineLimit(1)
                     .minimumScaleFactor(0.8)
@@ -589,10 +603,10 @@ struct NextWorkoutView: View {
                 Caption("UP NEXT")
                 Spacer(minLength: 0)
                 Text(snap.next.title)
-                    .font(.system(size: 22, weight: .heavy))
+                    .font(WP.font(size: 22, weight: .heavy))
                     .foregroundStyle(WP.ink)
                 Text(snap.nextCount.counted("exercise"))
-                    .font(.system(size: 12))
+                    .font(WP.font(size: 12))
                     .foregroundStyle(WP.sub)
                 Spacer(minLength: 0)
                 StartPill()
@@ -652,15 +666,15 @@ struct StreakWidget: Widget {
                 Spacer(minLength: 0)
                 HStack(alignment: .firstTextBaseline, spacing: 4) {
                     Text("\(snap.streak(entry.date))")
-                        .font(.system(size: 48, weight: .heavy))
+                        .font(WP.font(size: 48, weight: .heavy))
                         .foregroundStyle(WP.accent)
                     Text("weeks")
-                        .font(.system(size: 15, weight: .bold))
+                        .font(WP.font(size: 15, weight: .bold))
                         .foregroundStyle(WP.sub)
                 }
                 Spacer(minLength: 0)
                 Text(left == 0 ? "This week's done" : "\(left) more this week")
-                    .font(.system(size: 12))
+                    .font(WP.font(size: 12))
                     .foregroundStyle(WP.sub)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -704,18 +718,18 @@ struct TrendWidget: Widget {
                         .padding(.vertical, 4)
                     HStack(alignment: .firstTextBaseline) {
                         Text("\(WidgetSnapshot.fmt(last)) lb")
-                            .font(.system(size: 20, weight: .heavy))
+                            .font(WP.font(size: 20, weight: .heavy))
                             .foregroundStyle(WP.ink)
                         Spacer()
                         Text((last - first >= 0 ? "+" : "") + WidgetSnapshot.fmt(last - first))
-                            .font(.system(size: 12, weight: .bold))
+                            .font(WP.font(size: 12, weight: .bold))
                             .foregroundStyle(last > first ? WP.good : WP.sub)
                     }
                 } else {
                     Caption("LIFT TREND")
                     Spacer(minLength: 0)
                     Text("Log an exercise twice to see its trend.")
-                        .font(.system(size: 12))
+                        .font(WP.font(size: 12))
                         .foregroundStyle(WP.sub)
                 }
             }
@@ -739,11 +753,11 @@ struct MoveUpWidget: Widget {
                         Caption("MOVE UP?")
                         Spacer(minLength: 0)
                         Text(m.name)
-                            .font(.system(size: 15, weight: .heavy))
+                            .font(WP.font(size: 15, weight: .heavy))
                             .foregroundStyle(WP.ink)
                             .lineLimit(2)
                         Text("\(m.sessions) sessions at \(WidgetSnapshot.fmt(m.weight)) lb. Try \(WidgetSnapshot.fmt(m.next)).")
-                            .font(.system(size: 12))
+                            .font(WP.font(size: 12))
                             .foregroundStyle(WP.sub)
                             .padding(.top, 2)
                         Spacer(minLength: 0)
@@ -755,10 +769,10 @@ struct MoveUpWidget: Widget {
                         Caption("MOVE UP?")
                         Spacer(minLength: 0)
                         Text("Nothing stuck")
-                            .font(.system(size: 15, weight: .heavy))
+                            .font(WP.font(size: 15, weight: .heavy))
                             .foregroundStyle(WP.ink)
                         Text("You'll get a nudge here after 6 sessions at the same weight.")
-                            .font(.system(size: 12))
+                            .font(WP.font(size: 12))
                             .foregroundStyle(WP.sub)
                             .padding(.top, 2)
                         Spacer(minLength: 0)

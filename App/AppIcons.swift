@@ -34,6 +34,11 @@ struct AppIconOption: Identifiable, Hashable {
 enum AppIcons {
     static let all: [AppIconOption] = [
         AppIconOption(id: "glacier", name: "Glacier", group: "Classic", palette: "glacier"),
+        AppIconOption(id: "cartridge", name: "Cartridge", group: "Theme icons", palette: "grape"),
+        AppIconOption(id: "press", name: "Press", group: "Theme icons", palette: "mono"),
+        AppIconOption(id: "prompt", name: "Prompt", group: "Theme icons", palette: "volt"),
+        AppIconOption(id: "poster", name: "Poster", group: "Theme icons", palette: "rose"),
+        AppIconOption(id: "vice", name: "Vice City", group: "Theme icons", palette: "rose"),
         AppIconOption(id: "pixel", name: "8-Bit", group: "Video game", palette: "grape", unlock: .workouts(1)),
         AppIconOption(id: "pocket", name: "Pocket", group: "Video game", palette: "volt", unlock: .workouts(5)),
         AppIconOption(id: "arcade", name: "Arcade", group: "Video game", palette: "grape", unlock: .workouts(10)),
@@ -47,7 +52,7 @@ enum AppIcons {
         AppIconOption(id: "ember", name: "Ember", group: "Fitness", palette: "ember"),
         AppIconOption(id: "blackout", name: "Blackout", group: "Fitness", palette: "volt"),
         AppIconOption(id: "plate", name: "Plate", group: "Picks", palette: "glacier"),
-        AppIconOption(id: "blueprint", name: "Blueprint", group: "Picks", palette: "glacier"),
+        AppIconOption(id: "neon", name: "Neon", group: "Picks", palette: "rose"),
         AppIconOption(id: "skeuo", name: "Skeuo", group: "Iconic eras", palette: "glacier"),
         AppIconOption(id: "onebit", name: "1-Bit", group: "Iconic eras", palette: "mono"),
         AppIconOption(id: "aero", name: "Aero", group: "Iconic eras", palette: "glacier"),
@@ -62,6 +67,15 @@ enum AppIcons {
     static var current: AppIconOption {
         let name = UIApplication.shared.alternateIconName
         return all.first { $0.assetName == name } ?? all[0]
+    }
+
+    /// Icons taken out in an update. Anyone still using one goes back to the main icon.
+    static let removed = ["AppIcon-blueprint"]
+
+    @MainActor
+    static func retireRemoved() async {
+        guard let name = UIApplication.shared.alternateIconName, removed.contains(name) else { return }
+        try? await UIApplication.shared.setAlternateIconName(nil)
     }
 
     @MainActor
@@ -91,13 +105,13 @@ struct IconPicker: View {
         VStack(alignment: .leading, spacing: 14) {
             if let totals {
                 Text(totals.workouts.counted("workout") + " · " + totals.records.counted("record") + " · \(totals.streak)-week streak")
-                    .font(.system(size: 12, weight: .semibold))
+                    .font(Theme.font(size: 12, weight: .semibold))
                     .foregroundStyle(Theme.sub)
             }
             ForEach(AppIcons.groups, id: \.self) { group in
                 VStack(alignment: .leading, spacing: 8) {
                     Text(group.uppercased())
-                        .font(.system(size: 11, weight: .bold))
+                        .font(Theme.font(size: 11, weight: .bold))
                         .tracking(0.8)
                         .foregroundStyle(Theme.sub)
                     LazyVGrid(columns: columns, alignment: .leading, spacing: 12) {
@@ -111,7 +125,7 @@ struct IconPicker: View {
                 HStack(spacing: 10) {
                     Circle().fill(suggestion.accentColor).frame(width: 22, height: 22)
                     Text("Match the color too?")
-                        .font(.system(size: 14, weight: .semibold))
+                        .font(Theme.font(size: 14, weight: .semibold))
                     Spacer()
                     Button("Use \(suggestion.name)") {
                         store.data.accent = suggestion.id
@@ -135,7 +149,7 @@ struct IconPicker: View {
                 Text(error).font(.caption).foregroundStyle(Theme.sub)
             }
             Toggle("Unlock icons by training", isOn: $store.data.unlockIcons)
-                .font(.system(size: 15))
+                .font(Theme.font(size: 15))
         }
         .padding(.vertical, 6)
     }
@@ -167,7 +181,7 @@ struct IconPicker: View {
                     .overlay {
                         if locked {
                             Image(systemName: "lock.fill")
-                                .font(.system(size: 18, weight: .bold))
+                                .font(Theme.font(size: 18, weight: .bold))
                                 .foregroundStyle(.white)
                                 .shadow(radius: 3)
                         }
@@ -178,7 +192,7 @@ struct IconPicker: View {
                             .padding(-3)
                     )
                 Text(locked ? (option.unlock?.text ?? option.name) : option.name)
-                    .font(.system(size: 11, weight: selected ? .bold : .medium))
+                    .font(Theme.font(size: 11, weight: selected ? .bold : .medium))
                     .foregroundStyle(selected ? Theme.accentText : Theme.sub)
                     .lineLimit(1)
                     .minimumScaleFactor(0.8)
