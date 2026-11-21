@@ -130,6 +130,7 @@ struct WorkoutView: View {
                         .transition(.move(edge: .bottom).combined(with: .opacity))
                 }
             }
+            .tabBarClearance()
             .animation(.snappy, value: rest.endsAt)
             .sheet(isPresented: $showEquipment) {
                 EquipmentSheet()

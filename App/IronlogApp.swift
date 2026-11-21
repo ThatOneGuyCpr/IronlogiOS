@@ -44,7 +44,10 @@ struct RootView: View {
         .tint(Theme.accent)
         .font(Theme.font(size: 17))
         .textCase(Theme.skin.allCaps ? .uppercase : nil)
-        .task { await AppIcons.retireRemoved() }
+        .task {
+            await AppIcons.retireRemoved()
+            store.currentIcon = AppIcons.current.id
+        }
         .overlay(alignment: .top) {
             if let c = store.celebration {
                 ZStack(alignment: .top) {
@@ -81,6 +84,8 @@ struct RootView: View {
                     }
             }
             .themedText()
+            // Rebuild with each theme so the background, title and type all follow.
+            .id(store.lookID)
             .presentationDetents([.large])
         }
         .onOpenURL { url in handle(url) }
@@ -116,8 +121,11 @@ struct RootView: View {
                 case .settings: SettingsView()
                 }
             }
-            .safeAreaInset(edge: .bottom, spacing: 0) {
+            // Each scrolling screen keeps its own room for the bar (see tabBarClearance),
+            // so nested navigation stacks and the rest timer stack above it.
+            .overlay(alignment: .bottom) {
                 ThemedTabBar(tab: $tab)
+                    .ignoresSafeArea(.keyboard, edges: .bottom)
             }
         }
     }

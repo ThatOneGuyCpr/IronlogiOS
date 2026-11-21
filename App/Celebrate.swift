@@ -68,6 +68,17 @@ struct RecordBanner: View {
     let celebration: Store.Celebration
     @State private var bounce = false
 
+    /// Edge drawn around the banner in themes with framed cards.
+    private var frame: (Color, CGFloat)? {
+        switch Theme.skin.card {
+        case .pixel: return (.white, 3)
+        case .window, .vice: return (.black, 2.5)
+        case .panel: return (Theme.accentText, 2)
+        case .terminal: return (Theme.accentInk, 1)
+        default: return nil
+        }
+    }
+
     var body: some View {
         HStack(spacing: 12) {
             Image(systemName: "trophy.fill")
@@ -76,11 +87,11 @@ struct RecordBanner: View {
                 .symbolEffect(.bounce, value: bounce)
             VStack(alignment: .leading, spacing: 1) {
                 Text(celebration.title.uppercased())
-                    .font(Theme.font(size: 11, weight: .heavy))
+                    .font(Theme.label(11, .heavy))
                     .tracking(1)
                     .opacity(0.85)
                 Text(celebration.detail)
-                    .font(Theme.font(size: 15, weight: .bold))
+                    .font(Theme.font(size: 16, weight: .bold))
                     .lineLimit(2)
             }
             .foregroundStyle(Theme.accentInk)
@@ -89,7 +100,19 @@ struct RecordBanner: View {
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
         .background(Theme.accent, in: RoundedRectangle(cornerRadius: Theme.radius(22), style: .continuous))
-        .shadow(color: Theme.shadow, radius: 16, y: 6)
+        .overlay {
+            if let border = frame {
+                RoundedRectangle(cornerRadius: Theme.radius(22), style: .continuous)
+                    .strokeBorder(border.0, lineWidth: border.1)
+            }
+        }
+        .background {
+            if Theme.skin.card == .window {
+                Rectangle().fill(.black).offset(x: 3, y: 3)
+            }
+        }
+        .shadow(color: Theme.skin.isGlacier ? Theme.shadow : .black.opacity(0.35), radius: 16, y: 6)
+        .textCase(Theme.skin.allCaps ? .uppercase : nil)
         .padding(.horizontal, 16)
         .onAppear { bounce.toggle() }
         .accessibilityElement(children: .combine)

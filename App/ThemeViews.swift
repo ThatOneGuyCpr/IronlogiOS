@@ -344,16 +344,20 @@ struct ThemePickerView: View {
     private let columns = [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)]
 
     var body: some View {
+        ScrollViewReader { proxy in
         ScrollView {
             VStack(alignment: .leading, spacing: 18) {
-                Text("Changes the type, shapes, textures and colors across the app and widgets.")
-                    .font(Theme.font(size: 14))
-                    .foregroundStyle(Theme.headSub)
-                LazyVGrid(columns: columns, spacing: 14) {
-                    ForEach(Skin.all) { s in
-                        tile(s)
+                VStack(alignment: .leading, spacing: 14) {
+                    Text("Changes the type, shapes, textures and colors across the app and widgets.")
+                        .font(Theme.font(size: 14))
+                        .foregroundStyle(Theme.sub)
+                    LazyVGrid(columns: columns, spacing: 14) {
+                        ForEach(Skin.all) { s in
+                            tile(s).id(s.id)
+                        }
                     }
                 }
+                .glacierCard(radius: 20, padding: 14, title: "Themes")
                 VStack(alignment: .leading, spacing: 14) {
                     Toggle(isOn: $store.data.skinIcon) {
                         VStack(alignment: .leading, spacing: 2) {
@@ -383,12 +387,20 @@ struct ThemePickerView: View {
                 .foregroundStyle(Theme.ink)
                 .glacierCard(radius: 20, padding: 16)
                 if let error {
-                    Text(error).font(Theme.font(size: 12)).foregroundStyle(Theme.headSub)
+                    Text(error)
+                        .font(Theme.font(size: 12))
+                        .foregroundStyle(Theme.ink)
+                        .glacierCard(radius: 16, padding: 12)
                 }
             }
             .padding(.horizontal, 20)
             .padding(.top, 8)
             .padding(.bottom, 32)
+        }
+        .onAppear {
+            // The picker rebuilds with each theme; land back on the one just picked.
+            proxy.scrollTo(store.data.skin, anchor: .center)
+        }
         }
         .background { SkyBackground() }
         .navigationTitle("Theme")
@@ -441,12 +453,12 @@ struct ThemePickerView: View {
                         }
                     }
                 Text(s.name)
-                    .font(.system(size: 13, weight: .bold))
-                    .foregroundStyle(Theme.head)
+                    .font(Theme.font(size: 13, weight: .bold))
+                    .foregroundStyle(Theme.ink)
                     .textCase(nil)
                 Text(s.blurb)
-                    .font(.system(size: 11))
-                    .foregroundStyle(Theme.headSub)
+                    .font(Theme.font(size: 11))
+                    .foregroundStyle(Theme.sub)
                     .textCase(nil)
                     .lineLimit(1)
             }
@@ -464,7 +476,7 @@ struct ThemePickerView: View {
         let iconID = s.isGlacier ? "glacier" : s.icon
         guard let iconID, let option = AppIcons.all.first(where: { $0.id == iconID }) else { return }
         Task {
-            error = await AppIcons.set(option)
+            error = await store.setIcon(option)
         }
     }
 }

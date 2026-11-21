@@ -102,6 +102,44 @@ enum Theme {
         }
     }
 
+    /// System text styles, themed. Sizes match the default Dynamic Type size.
+    static func style(_ style: Font.TextStyle, _ weight: Font.Weight? = nil) -> Font {
+        if skin.isGlacier {
+            let f = Font.system(style)
+            return weight.map { f.weight($0) } ?? f
+        }
+        let spec: (CGFloat, Font.Weight) = {
+            switch style {
+            case .largeTitle: return (34, .bold)
+            case .title: return (28, .bold)
+            case .title2: return (22, .bold)
+            case .title3: return (20, .semibold)
+            case .headline: return (17, .semibold)
+            case .callout: return (16, .regular)
+            case .subheadline: return (15, .regular)
+            case .footnote: return (13, .regular)
+            case .caption: return (12, .regular)
+            case .caption2: return (11, .regular)
+            default: return (17, .regular)
+            }
+        }()
+        return font(size: spec.0, weight: weight ?? spec.1)
+    }
+
+    /// Room the themed tab bar takes at the bottom of the screen.
+    static var tabBarHeight: CGFloat {
+        switch skin.tab {
+        case .system: return 0
+        case .block: return 62
+        case .text: return 54
+        case .taskbar: return 58
+        case .window: return 67
+        case .ropes: return 61
+        case .underline: return 52
+        case .pause: return 62
+        }
+    }
+
     static var squareCorners: Bool { !skin.isGlacier && skin.cardRadius <= 2 }
     static func radius(_ glacier: CGFloat) -> CGFloat {
         skin.isGlacier ? glacier : min(glacier, skin.cardRadius)
@@ -135,12 +173,24 @@ enum NumberStyle: String, CaseIterable, Identifiable {
 // MARK: - Background
 
 struct SkyBackground: View {
+    /// Lists and forms: swap a busy pattern for a plain fill so headers and footers stay readable.
+    var calm = false
+
     var body: some View {
         backdrop.ignoresSafeArea()
     }
 
     @ViewBuilder
     private var backdrop: some View {
+        if calm && Theme.skin.backdrop == .dither {
+            Color.white
+        } else {
+            pattern
+        }
+    }
+
+    @ViewBuilder
+    private var pattern: some View {
         switch Theme.skin.backdrop {
         case .glacier:
             ZStack {
@@ -320,6 +370,18 @@ struct GlacierCard: ViewModifier {
 }
 
 extension View {
+    /// Keeps the bottom of a scrolling screen clear of a theme's tab bar.
+    @ViewBuilder
+    func tabBarClearance() -> some View {
+        if Theme.skin.tab == .system {
+            self
+        } else {
+            self.safeAreaInset(edge: .bottom, spacing: 0) {
+                Color.clear.frame(height: Theme.tabBarHeight).allowsHitTesting(false)
+            }
+        }
+    }
+
     /// The skin's default type and caps, for sheets shown from the app root.
     func themedText() -> some View {
         self

@@ -57,15 +57,15 @@ struct EquipmentSheet: View {
     private func changeRow(title: String, detail: String?, index: Int) -> some View {
         HStack {
             VStack(alignment: .leading, spacing: 2) {
-                Text(title).font(.subheadline)
+                Text(title).font(Theme.style(.subheadline))
                 if let detail {
-                    Text(detail).font(.caption).foregroundStyle(.secondary)
+                    Text(detail).font(Theme.style(.caption)).foregroundStyle(.secondary)
                 }
             }
             Spacer()
             Button("Options") { swapIndex = IndexBox(id: index) }
                 .buttonStyle(.glass)
-                .font(.caption)
+                .font(Theme.style(.caption))
         }
     }
 
@@ -122,12 +122,12 @@ struct SwapSheet: View {
                                             Text(ex.name)
                                                 .foregroundStyle(ok ? Color.primary : Color.secondary)
                                             Text(store.prescription(id).summary(for: ex))
-                                                .font(.caption)
+                                                .font(Theme.style(.caption))
                                                 .foregroundStyle(.secondary)
                                         }
                                         Spacer()
                                         Text(current ? "Current" : inWorkout ? "In workout" : store.missingReason(id))
-                                            .font(.caption)
+                                            .font(Theme.style(.caption))
                                             .foregroundStyle(Theme.accent)
                                     }
                                 }
@@ -288,7 +288,7 @@ struct FinishSheet: View {
                                     .foregroundStyle(Theme.ink)
                                 Spacer()
                                 Button("Use it") {
-                                    Task { _ = await AppIcons.set(option) }
+                                    Task { await store.setIcon(option) }
                                 }
                                 .buttonStyle(.glassProminent)
                                 .tint(Theme.accent)

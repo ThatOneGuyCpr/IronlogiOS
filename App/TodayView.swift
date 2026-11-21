@@ -38,6 +38,7 @@ struct TodayView: View {
             .padding(.top, 8)
             .padding(.bottom, 32)
         }
+        .tabBarClearance()
         .background { SkyBackground() }
         .sheet(isPresented: $showEquipment) {
             EquipmentSheet()

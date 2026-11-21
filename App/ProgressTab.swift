@@ -28,6 +28,7 @@ struct ProgressTab: View {
                 .padding(.top, 8)
                 .padding(.bottom, 32)
             }
+            .tabBarClearance()
             .background { SkyBackground() }
             .toolbar(.hidden, for: .navigationBar)
         }

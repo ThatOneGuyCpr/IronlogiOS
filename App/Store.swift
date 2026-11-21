@@ -214,6 +214,16 @@ final class Store: ObservableObject {
     @Published var lastFinished: HistoryEntry?
     /// The theme picker, shown above the app so it stays open while the look changes.
     @Published var showThemes = false
+    /// The app icon in use. Updated only after iOS confirms a switch, so the picker never shows a stale one.
+    @Published var currentIcon: String = AppIcons.current.id
+
+    /// Switches the home screen icon and records it once it took.
+    @discardableResult
+    func setIcon(_ option: AppIconOption) async -> String? {
+        let failure = await AppIcons.set(option)
+        currentIcon = AppIcons.current.id
+        return failure
+    }
 
     private var saveTask: Task<Void, Never>?
 

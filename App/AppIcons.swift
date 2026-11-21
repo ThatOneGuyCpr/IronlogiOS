@@ -94,7 +94,6 @@ enum AppIcons {
 /// Grid of icons used in Settings.
 struct IconPicker: View {
     @EnvironmentObject private var store: Store
-    @State private var current: AppIconOption = AppIcons.current
     @State private var suggestion: Palette?
     @State private var error: String?
 
@@ -146,7 +145,7 @@ struct IconPicker: View {
                 .transition(.opacity.combined(with: .move(edge: .top)))
             }
             if let error {
-                Text(error).font(.caption).foregroundStyle(Theme.sub)
+                Text(error).font(Theme.style(.caption)).foregroundStyle(Theme.sub)
             }
             Toggle("Unlock icons by training", isOn: $store.data.unlockIcons)
                 .font(Theme.font(size: 15))
@@ -155,17 +154,16 @@ struct IconPicker: View {
     }
 
     private func cell(_ option: AppIconOption, locked: Bool) -> some View {
-        let selected = option.id == current.id
+        let selected = option.id == store.currentIcon
         return Button {
             if locked {
                 withAnimation { error = "\(option.name) unlocks at: \(option.unlock?.text ?? "")." }
                 return
             }
             Task {
-                let failure = await AppIcons.set(option)
+                let failure = await store.setIcon(option)
                 error = failure
-                guard failure == nil else { return }
-                current = option
+                guard failure == nil, Theme.skin.isGlacier else { return }
                 withAnimation {
                     suggestion = option.palette == store.data.accent ? nil : Palette.named(option.palette)
                 }

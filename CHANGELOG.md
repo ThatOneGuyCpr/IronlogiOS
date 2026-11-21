@@ -4,6 +4,14 @@ Versions follow `MAJOR.MINOR.PATCH`. Everything before 1.0.0 is pre-launch.
 Bump MINOR for new features, PATCH for fixes, in `project.yml` (`MARKETING_VERSION`).
 Releases show only the version number.
 
+## 0.9.1
+- The theme picker restyles itself as you tap through themes (background, title and type) and stays on the one you picked.
+- Nothing hides under a theme's tab bar anymore: Discard workout, Erase all data and the bottom of every list scroll clear of it, and the rest timer sits above it.
+- History is themed: workout rows, plus the workout detail screen with its sets, volume and minutes up top, records and every set.
+- The record banner during a workout uses the theme's type and frame.
+- Settings headers and footers read on every theme, and 1-Bit's lists sit on plain white instead of the dither.
+- The icon picker always marks the icon you're actually using, even right after a theme switches it.
+
 ## 0.9.0
 - Themes. Settings › Look › Theme restyles the whole app (type, shapes, textures, colors, the tab bar, even a few words) plus the widgets and the lock screen timer:
   - Glacier: the original, with its color, background and number settings.

@@ -14,7 +14,7 @@ struct SettingsView: View {
         NavigationStack {
             Form {
                 Group {
-                Section("Look") {
+                Section(header: FormHeader("Look")) {
                     Button {
                         store.showThemes = true
                     } label: {
@@ -62,7 +62,7 @@ struct SettingsView: View {
                     Toggle("Celebrate records", isOn: $store.data.celebrations)
                 }
 
-                Section("App icon") {
+                Section(header: FormHeader("App icon")) {
                     IconPicker()
                 }
 
@@ -73,12 +73,12 @@ struct SettingsView: View {
                     }
                     Toggle("Compact mode", isOn: $store.data.compact)
                 } header: {
-                    Text("Workout screen")
+                    FormHeader("Workout screen")
                 } footer: {
-                    Text("Compact mode tightens the set rows and tucks the form video behind a play button, so more fits on screen.")
+                    FormFooter("Compact mode tightens the set rows and tucks the form video behind a play button, so more fits on screen.")
                 }
 
-                Section("Goals") {
+                Section(header: FormHeader("Goals")) {
                     Button {
                         showPlans = true
                     } label: {
@@ -90,13 +90,13 @@ struct SettingsView: View {
                     Toggle("Pair supersets by default", isOn: $store.data.supersetsByDefault)
                 }
 
-                Section("What's open by default") {
+                Section(header: FormHeader("What's open by default")) {
                     EquipmentChips()
                         .listRowBackground(Color.clear)
                         .listRowInsets(EdgeInsets(top: 4, leading: 0, bottom: 4, trailing: 0))
                 }
 
-                Section("Exercises") {
+                Section(header: FormHeader("Exercises")) {
                     NavigationLink("Sets, reps and rest") { ExerciseListView() }
                     NavigationLink {
                         HiddenListView()
@@ -125,13 +125,13 @@ struct SettingsView: View {
                             4. If Shortcut Input isn't offered, open the shortcut's details and turn on receiving Text input.
                             5. Come back here and tap the test button. The first run asks for Health permission.
                             """)
-                            .font(.callout)
+                            .font(Theme.style(.callout))
                         }
                     }
                 } header: {
-                    Text("Apple Health")
+                    FormHeader("Apple Health")
                 } footer: {
-                    Text("SideStore can't grant direct Health access, so Ironlog hands each workout to a shortcut that logs it.")
+                    FormFooter("SideStore can't grant direct Health access, so Ironlog hands each workout to a shortcut that logs it.")
                 }
 
                 Section {
@@ -146,21 +146,21 @@ struct SettingsView: View {
                         3. Add "Save File". Turn off Ask Where to Save, set the folder (for example iCloud Drive › Shortcuts › Ironlog), and turn on Overwrite If File Exists.
                         That's it. Your latest backup stays in iCloud Drive. To restore, tap Import a backup and pick that file.
                         """)
-                        .font(.callout)
+                        .font(Theme.style(.callout))
                     }
                 } header: {
-                    Text("Backup")
+                    FormHeader("Backup")
                 } footer: {
-                    Text("Workouts live only on this phone. The daily automation keeps a copy in iCloud Drive without you doing anything.")
+                    FormFooter("Workouts live only on this phone. The daily automation keeps a copy in iCloud Drive without you doing anything.")
                 }
 
                 Section {
                     LabeledContent("Widget storage", value: SharedStore.groupWorks ? "OK" : "Not available")
                     LabeledContent("Signing", value: Provisioning.summary)
-                        .font(.caption)
+                        .font(Theme.style(.caption))
                     LabeledContent("Version", value: appVersion)
                 } header: {
-                    Text("Diagnostics")
+                    FormHeader("Diagnostics")
                 }
 
                 Section {
@@ -170,7 +170,8 @@ struct SettingsView: View {
                 .listRowBackground(Theme.row)
             }
             .scrollContentBackground(.hidden)
-            .background { SkyBackground() }
+            .tabBarClearance()
+            .background { SkyBackground(calm: true) }
             .navigationTitle(Theme.skin.isGlacier ? "Settings" : Theme.words.tabs[3])
             .onAppear { exportURL = store.exportFileURL() }
             .fileImporter(isPresented: $importing, allowedContentTypes: [.json]) { result in
@@ -222,22 +223,24 @@ struct ExerciseListView: View {
             } label: {
                 HStack {
                     VStack(alignment: .leading, spacing: 2) {
-                        Text(ex.name).foregroundStyle(Color.primary)
+                        Text(ex.name).foregroundStyle(Theme.ink)
                         Text(store.basePrescription(ex.id).summary(for: ex))
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
+                            .font(Theme.style(.caption))
+                            .foregroundStyle(Theme.sub)
                     }
                     Spacer()
                     if store.isCustom(ex.id) {
                         Text("Custom")
-                            .font(.caption2.weight(.bold))
-                            .foregroundStyle(Theme.accent)
+                            .font(Theme.style(.caption2, .bold))
+                            .foregroundStyle(Theme.accentText)
                     }
                 }
             }
+            .listRowBackground(Theme.row)
         }
         .scrollContentBackground(.hidden)
-        .background { SkyBackground() }
+        .tabBarClearance()
+        .background { SkyBackground(calm: true) }
         .navigationTitle("Sets, reps and rest")
         .navigationBarTitleDisplayMode(.inline)
         .sheet(item: $editing) { box in
@@ -254,20 +257,57 @@ struct HiddenListView: View {
         List {
             if store.data.hidden.isEmpty {
                 Text("Nothing hidden. Use the ⋯ menu on an exercise during a workout to hide it.")
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Theme.sub)
+                    .listRowBackground(Theme.row)
             }
             ForEach(store.data.hidden.sorted(), id: \.self) { id in
                 HStack {
                     Text(Library.byID[id]?.name ?? id)
                     Spacer()
                     Button("Restore") { store.unhide(id) }
-                        .buttonStyle(.glass)
+                        .padding(.horizontal, 12)
+                        .frame(height: 34)
+                        .themedChipButton()
                 }
+                .listRowBackground(Theme.row)
             }
         }
         .scrollContentBackground(.hidden)
-        .background { SkyBackground() }
+        .tabBarClearance()
+        .background { SkyBackground(calm: true) }
         .navigationTitle("Hidden exercises")
         .navigationBarTitleDisplayMode(.inline)
+    }
+}
+
+/// Section header that reads on any theme's background.
+struct FormHeader: View {
+    let text: String
+    init(_ text: String) { self.text = text }
+
+    var body: some View {
+        if Theme.skin.isGlacier {
+            Text(text)
+        } else {
+            Text(text)
+                .font(Theme.label(13, .bold))
+                .foregroundStyle(Theme.headSub)
+        }
+    }
+}
+
+/// Section footer that reads on any theme's background.
+struct FormFooter: View {
+    let text: String
+    init(_ text: String) { self.text = text }
+
+    var body: some View {
+        if Theme.skin.isGlacier {
+            Text(text)
+        } else {
+            Text(text)
+                .font(Theme.font(size: 13))
+                .foregroundStyle(Theme.headSub)
+        }
     }
 }
