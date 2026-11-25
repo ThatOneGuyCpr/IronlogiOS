@@ -153,8 +153,8 @@ enum ProgramID: String, CaseIterable, Codable, Identifiable {
 
 // MARK: - Plan
 
-/// How hard and how dense each session is. Trades rest and accessory sets for time,
-/// and asks for more effort on the sets that are left.
+/// How much you do in a session: 6, 7 or 8 exercises. High runs each exercise as written;
+/// Normal trims rest to fit about half an hour; Max adds a set to the main lifts and longer rest.
 enum Intensity: String, Codable, CaseIterable, Identifiable {
     case normal, high, max
 
@@ -168,38 +168,34 @@ enum Intensity: String, Codable, CaseIterable, Identifiable {
         }
     }
 
+    /// Slots with a tier at or below this are in play.
+    var rank: Int {
+        switch self {
+        case .normal: return 0
+        case .high: return 1
+        case .max: return 2
+        }
+    }
+
+    var exercises: Int { 6 + rank }
+
     var blurb: String {
         switch self {
-        case .normal: return "Full rest. Stop about 2 reps short of failure."
-        case .high: return "Rest cut by a quarter. Stop 1 rep short of failure."
-        case .max: return "Shortest rest, and one less set after the first three lifts. Take the last set of each exercise to failure."
+        case .normal: return "6 exercises with a little less rest. Every muscle still gets direct work across the week."
+        case .high: return "7 exercises, each one as written."
+        case .max: return "8 exercises, an extra set on each day's first three lifts, and longer rest."
         }
     }
 
-    /// Shown on the workout screen.
-    var effort: String {
+    /// `main` is one of the first three slots: the day's squat or hinge, push and pull.
+    /// Normal never shortens rest below 60s on those or 30s on the rest.
+    func rest(_ seconds: Int, main: Bool) -> Int {
+        let floor = main ? 60 : 30
         switch self {
-        case .normal: return "Stop about 2 reps short of failure"
-        case .high: return "Stop 1 rep short of failure"
-        case .max: return "Last set of each exercise to failure"
+        case .normal: return seconds <= floor ? seconds : Swift.max(floor, seconds - 15)
+        case .high: return seconds
+        case .max: return seconds + 15
         }
-    }
-
-    private var restScale: Double {
-        switch self {
-        case .normal: return 1
-        case .high: return 0.75
-        case .max: return 0.6
-        }
-    }
-
-    /// Shorter rest, but never below a floor that keeps the next set useful.
-    func rest(_ seconds: Int, compound: Bool) -> Int {
-        guard self != .normal else { return seconds }
-        let floor = compound ? 60 : 30
-        if seconds <= floor { return seconds }
-        let scaled = Int((Double(seconds) * restScale / 5).rounded()) * 5
-        return Swift.max(floor, scaled)
     }
 }
 
@@ -299,9 +295,8 @@ struct Plan: Codable, Equatable {
     }
 
     /// Sets for one exercise after program and focus adjustments.
-    /// `accessory` is any slot after the first three, which hold each day's main squat or hinge,
-    /// push and pull. Max drops a set there, except on muscles you're growing.
-    func sets(_ base: Int, for muscle: Muscle?, accessory: Bool = false) -> Int {
+    /// `main` is one of the day's first three slots; Max gives those an extra set.
+    func sets(_ base: Int, for muscle: Muscle?, main: Bool = false) -> Int {
         var delta = program.setDelta
         if let muscle {
             switch focus(for: muscle) {
@@ -310,9 +305,7 @@ struct Plan: Codable, Equatable {
             case .keep: break
             }
         }
-        if intensity == .max, accessory, muscle.map({ focus(for: $0) != .grow }) ?? true {
-            delta -= 1
-        }
+        if intensity == .max, main { delta += 1 }
         return max(2, min(6, base + delta))
     }
 

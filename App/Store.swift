@@ -336,7 +336,8 @@ final class Store: ObservableObject {
         let plan = override ?? data.plan
         let r = routine ?? data.session?.routine
         let slot = r.flatMap { r in r.slots.firstIndex(where: { $0.candidates.contains(id) }) }
-        p.sets = plan.sets(p.sets, for: Library.muscleByID[id], accessory: (slot ?? 0) >= 3)
+        let main = (slot ?? 0) < 3
+        p.sets = plan.sets(p.sets, for: Library.muscleByID[id], main: main)
         if plan.program.powerDays, let r, r.variant == "A",
            !isCustom(id), let ex = Library.byID[id], !ex.timed, ex.preset.rest >= 90,
            let slot, slot < 2 {
@@ -344,8 +345,7 @@ final class Store: ObservableObject {
             p.high = 6
             p.rest = max(p.rest, 120)
         }
-        let compound = (Library.byID[id]?.preset.rest ?? p.rest) >= 90
-        p.rest = plan.intensity.rest(p.rest, compound: compound)
+        p.rest = plan.intensity.rest(p.rest, main: main)
         return p
     }
 
@@ -392,8 +392,16 @@ final class Store: ObservableObject {
         return nextRoutine
     }
 
-    func plan(_ routine: RoutineID) -> [Exercise?] {
-        Generator.plan(for: routine, open: data.open, hidden: data.hidden)
+    /// Picks lined up with `routine.slots`. Slots outside the intensity come back nil.
+    func plan(_ routine: RoutineID, level: Intensity? = nil) -> [Exercise?] {
+        Generator.plan(for: routine, open: data.open, hidden: data.hidden, level: level ?? data.plan.intensity)
+    }
+
+    /// Switches intensity from the Train screen. It sticks until you change it again.
+    func setIntensity(_ level: Intensity) {
+        guard data.plan.intensity != level else { return }
+        data.plan.intensity = level
+        syncWidget()
     }
 
     func lastDone(_ routine: RoutineID) -> Date? {
@@ -463,10 +471,11 @@ final class Store: ObservableObject {
 
     func startWorkout() {
         let routine = todayRoutine
-        let slots = routine.slots
-        let items = plan(routine).enumerated().map { i, ex in
-            ItemLog(slot: i, exerciseID: ex?.id, sets: ex.map { buildSets($0.id, routine: routine) } ?? [],
-                    superset: data.supersetsByDefault && slots[i].pairNext && i + 1 < slots.count)
+        let level = data.plan.intensity
+        let picks = plan(routine)
+        let items = routine.active(level).map { i in
+            ItemLog(slot: i, exerciseID: picks[i]?.id, sets: picks[i].map { buildSets($0.id, routine: routine) } ?? [],
+                    superset: data.supersetsByDefault && routine.pairs(i, level))
         }
         data.session = Session(routine: routine, start: Date(), items: items)
         celebrated = []
@@ -819,9 +828,9 @@ final class Store: ObservableObject {
     func weeklySets(for plan: Plan) -> [Muscle: Int] {
         var out: [Muscle: Int] = [:]
         for routine in plan.rotation {
-            for (i, pick) in self.plan(routine).enumerated() {
+            for (i, pick) in self.plan(routine, level: plan.intensity).enumerated() {
                 guard let ex = pick, let m = Library.muscleByID[ex.id] else { continue }
-                out[m, default: 0] += plan.sets(basePrescription(ex.id).sets, for: m, accessory: i >= 3)
+                out[m, default: 0] += plan.sets(basePrescription(ex.id).sets, for: m, main: i < 3)
             }
         }
         return out
@@ -851,14 +860,14 @@ final class Store: ObservableObject {
     /// About how long a session takes: ~45s per set plus rest, and ~45s to set up each exercise.
     /// A superset pair shares one rest.
     func estimatedMinutes(_ routine: RoutineID, plan override: Plan? = nil) -> Int {
-        let picks = plan(routine)
-        let slots = routine.slots
+        let level = (override ?? data.plan).intensity
+        let picks = plan(routine, level: level)
         var seconds = 45 * picks.compactMap { $0 }.count
         var i = 0
         while i < picks.count {
             guard let ex = picks[i] else { i += 1; continue }
             let p = prescription(ex.id, routine: routine, plan: override)
-            if data.supersetsByDefault, i < slots.count, slots[i].pairNext,
+            if data.supersetsByDefault, routine.pairs(i, level),
                i + 1 < picks.count, let partner = picks[i + 1] {
                 let q = prescription(partner.id, routine: routine, plan: override)
                 seconds += max(p.sets, q.sets) * (90 + max(p.rest, q.rest))

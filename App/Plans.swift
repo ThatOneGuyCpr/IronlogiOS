@@ -252,7 +252,7 @@ struct ProgramDetailView: View {
     }
 
     private func sessionLine(_ plan: Plan) -> String {
-        let counts = plan.rotation.map { store.plan($0).compactMap { $0 }.count }
+        let counts = plan.rotation.map { store.plan($0, level: plan.intensity).compactMap { $0 }.count }
         let avg = counts.isEmpty ? 0 : counts.reduce(0, +) / counts.count
         return "\(plan.days.counted("workout")) a week, about \(avg) exercises and \(minutes(plan)) min each."
     }
@@ -289,7 +289,7 @@ struct IntensityPicker: View {
                         VStack(spacing: 2) {
                             Text(level.name)
                                 .font(Theme.font(size: 15, weight: .bold))
-                            Text("~\(PlanMath.minutes(plan.with(level), store: store)) min")
+                            Text("\(level.exercises) ex · ~\(PlanMath.minutes(plan.with(level), store: store)) min")
                                 .font(Theme.font(size: 12, weight: .semibold))
                                 .opacity(0.8)
                         }
@@ -307,12 +307,10 @@ struct IntensityPicker: View {
                 .font(Theme.font(size: 13))
                 .foregroundStyle(Theme.sub)
                 .fixedSize(horizontal: false, vertical: true)
-            if selection == .max {
-                Text("Your first three lifts each day and any muscle you're growing keep every set.")
-                    .font(Theme.font(size: 13, weight: .semibold))
-                    .foregroundStyle(Theme.accentText)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
+            Text("You can also switch it any day on the Train screen.")
+                .font(Theme.font(size: 13, weight: .semibold))
+                .foregroundStyle(Theme.accentText)
+                .fixedSize(horizontal: false, vertical: true)
         }
     }
 }

@@ -27,11 +27,6 @@ struct WorkoutView: View {
                     let total = s.items.count
                     VStack(alignment: .leading, spacing: store.data.compact ? 8 : 12) {
                         progressBar(s)
-                        if store.data.plan.intensity != .normal {
-                            Label("\(store.data.plan.intensity.name) · \(store.data.plan.intensity.effort)", systemImage: "flame.fill")
-                                .font(Theme.font(size: 12, weight: .semibold))
-                                .foregroundStyle(Theme.accentText)
-                        }
                         ForEach(Array(s.items.enumerated()), id: \.element.id) { i, item in
                             let label = s.routine.slots[safe: item.slot]?.label ?? ""
                             if i == current || i == currentPartner || expanded.contains(item.id) {

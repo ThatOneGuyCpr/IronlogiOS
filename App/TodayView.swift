@@ -261,16 +261,50 @@ struct TodayView: View {
     }
 
     private var startButton: some View {
-        Button {
-            start()
-        } label: {
-            if Theme.skin.isGlacier {
-                Label(Theme.words.start, systemImage: "play.fill")
-            } else {
-                Text(Theme.words.start)
+        VStack(spacing: 10) {
+            intensityBar
+            Button {
+                start()
+            } label: {
+                if Theme.skin.isGlacier {
+                    Label(Theme.words.start, systemImage: "play.fill")
+                } else {
+                    Text(Theme.words.start)
+                }
+            }
+            .buttonStyle(PrimaryButtonStyle())
+        }
+    }
+
+    /// Pick how much to do today. Sticks to whatever you used last.
+    private var intensityBar: some View {
+        let current = store.data.plan.intensity
+        return HStack(spacing: 4) {
+            ForEach(Intensity.allCases) { level in
+                let on = level == current
+                let minutes = store.estimatedMinutes(routine, plan: store.data.plan.with(level))
+                Button {
+                    withAnimation(.snappy) { store.setIntensity(level) }
+                } label: {
+                    VStack(spacing: 1) {
+                        Text(level.name)
+                            .font(Theme.font(size: 14, weight: .bold))
+                        Text("\(level.exercises) ex · \(minutes)m")
+                            .font(Theme.font(size: 11, weight: .semibold))
+                            .opacity(on ? 0.9 : 0.75)
+                            .textCase(nil)
+                    }
+                    .frame(maxWidth: .infinity, minHeight: 44)
+                    .background(on ? Theme.accent : Theme.chip, in: RoundedRectangle(cornerRadius: Theme.radius(12), style: .continuous))
+                    .foregroundStyle(on ? Theme.accentInk : Theme.ink)
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("\(level.name): \(level.exercises) exercises, about \(minutes) minutes")
+                .accessibilityAddTraits(on ? .isSelected : [])
             }
         }
-        .buttonStyle(PrimaryButtonStyle())
+        .sensoryFeedback(.selection, trigger: current)
     }
 
     private var standardHero: some View {
@@ -889,8 +923,8 @@ struct TodayView: View {
             .padding(.horizontal, 18)
             .padding(.top, 16)
             .padding(.bottom, 6)
-            ForEach(Array(routine.slots.enumerated()), id: \.offset) { i, slot in
-                LineupRow(index: i + 1, slot: slot, exercise: picks[i], routine: routine)
+            ForEach(Array(routine.active(store.data.plan.intensity).enumerated()), id: \.element) { n, i in
+                LineupRow(index: n + 1, slot: routine.slots[i], exercise: picks[i], routine: routine)
             }
         }
         .glacierCard(padding: 0)

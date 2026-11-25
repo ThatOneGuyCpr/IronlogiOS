@@ -4,6 +4,16 @@ Versions follow `MAJOR.MINOR.PATCH`. Everything before 1.0.0 is pre-launch.
 Bump MINOR for new features, PATCH for fixes, in `project.yml` (`MARKETING_VERSION`).
 Releases show only the version number.
 
+## 0.10.1
+- Intensity now sets how much you do, on every plan:
+  - Normal: 6 exercises, about 35 minutes, with 15 seconds less rest.
+  - High: 7 exercises, about 45 minutes, each one as written.
+  - Max: 8 exercises, about an hour, with an extra set on each day's first three lifts and 15 seconds more rest.
+- Every day starts with its main squat or hinge, push and pull at all three levels. Lower levels drop accessories, spread across the week so every muscle still gets direct work. On Full Body at Normal, that's 9 weekly sets each for chest, back, quads, and hamstrings with glutes, 6 for side delts and 3 each for biceps, triceps, calves and abs.
+- Upper/Lower, Push/Pull/Legs and the Arms day keep their 6 exercises at Normal and add one at High and two at Max.
+- Switch intensity on the Train screen right above Start. Each option shows its exercise count and time, and it stays on whatever you used last.
+- Supersets only pair when both exercises are in play at your level.
+
 ## 0.10.0
 - Intensity for every plan: Normal, High or Max. Pick it when you preview a program or tune your plan; each option shows the session length it works out to.
   - Normal: full rest, stop about 2 reps short of failure.
