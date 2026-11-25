@@ -329,19 +329,23 @@ final class Store: ObservableObject {
         return Library.byID[id]?.preset ?? Preset.isolation
     }
 
-    /// What to actually do today: the base, adjusted by the plan's focus and program.
-    /// `routine` defaults to the workout in progress.
-    func prescription(_ id: String, routine: RoutineID? = nil) -> Prescription {
+    /// What to actually do today: the base, adjusted by the plan's focus, program and intensity.
+    /// `routine` defaults to the workout in progress; `plan` defaults to yours (pass one to preview).
+    func prescription(_ id: String, routine: RoutineID? = nil, plan override: Plan? = nil) -> Prescription {
         var p = basePrescription(id)
-        let plan = data.plan
-        p.sets = plan.sets(p.sets, for: Library.muscleByID[id])
-        if plan.program.powerDays, let r = routine ?? data.session?.routine, r.variant == "A",
+        let plan = override ?? data.plan
+        let r = routine ?? data.session?.routine
+        let slot = r.flatMap { r in r.slots.firstIndex(where: { $0.candidates.contains(id) }) }
+        p.sets = plan.sets(p.sets, for: Library.muscleByID[id], accessory: (slot ?? 0) >= 3)
+        if plan.program.powerDays, let r, r.variant == "A",
            !isCustom(id), let ex = Library.byID[id], !ex.timed, ex.preset.rest >= 90,
-           let slot = r.slots.firstIndex(where: { $0.candidates.contains(id) }), slot < 2 {
+           let slot, slot < 2 {
             p.low = 4
             p.high = 6
             p.rest = max(p.rest, 120)
         }
+        let compound = (Library.byID[id]?.preset.rest ?? p.rest) >= 90
+        p.rest = plan.intensity.rest(p.rest, compound: compound)
         return p
     }
 
@@ -815,9 +819,9 @@ final class Store: ObservableObject {
     func weeklySets(for plan: Plan) -> [Muscle: Int] {
         var out: [Muscle: Int] = [:]
         for routine in plan.rotation {
-            for ex in self.plan(routine).compactMap({ $0 }) {
-                guard let m = Library.muscleByID[ex.id] else { continue }
-                out[m, default: 0] += plan.sets(basePrescription(ex.id).sets, for: m)
+            for (i, pick) in self.plan(routine).enumerated() {
+                guard let ex = pick, let m = Library.muscleByID[ex.id] else { continue }
+                out[m, default: 0] += plan.sets(basePrescription(ex.id).sets, for: m, accessory: i >= 3)
             }
         }
         return out
@@ -844,10 +848,25 @@ final class Store: ObservableObject {
         syncWidget()
     }
 
-    func estimatedMinutes(_ routine: RoutineID) -> Int {
-        let seconds = plan(routine).compactMap { $0 }.reduce(0) { total, ex in
-            let p = prescription(ex.id, routine: routine)
-            return total + p.sets * (45 + p.rest)
+    /// About how long a session takes: ~45s per set plus rest, and ~45s to set up each exercise.
+    /// A superset pair shares one rest.
+    func estimatedMinutes(_ routine: RoutineID, plan override: Plan? = nil) -> Int {
+        let picks = plan(routine)
+        let slots = routine.slots
+        var seconds = 45 * picks.compactMap { $0 }.count
+        var i = 0
+        while i < picks.count {
+            guard let ex = picks[i] else { i += 1; continue }
+            let p = prescription(ex.id, routine: routine, plan: override)
+            if data.supersetsByDefault, i < slots.count, slots[i].pairNext,
+               i + 1 < picks.count, let partner = picks[i + 1] {
+                let q = prescription(partner.id, routine: routine, plan: override)
+                seconds += max(p.sets, q.sets) * (90 + max(p.rest, q.rest))
+                i += 2
+            } else {
+                seconds += p.sets * (45 + p.rest)
+                i += 1
+            }
         }
         return max(5, Int((Double(seconds) / 300).rounded()) * 5)
     }

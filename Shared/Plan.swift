@@ -153,6 +153,56 @@ enum ProgramID: String, CaseIterable, Codable, Identifiable {
 
 // MARK: - Plan
 
+/// How hard and how dense each session is. Trades rest and accessory sets for time,
+/// and asks for more effort on the sets that are left.
+enum Intensity: String, Codable, CaseIterable, Identifiable {
+    case normal, high, max
+
+    var id: String { rawValue }
+
+    var name: String {
+        switch self {
+        case .normal: return "Normal"
+        case .high: return "High"
+        case .max: return "Max"
+        }
+    }
+
+    var blurb: String {
+        switch self {
+        case .normal: return "Full rest. Stop about 2 reps short of failure."
+        case .high: return "Rest cut by a quarter. Stop 1 rep short of failure."
+        case .max: return "Shortest rest, and one less set after the first three lifts. Take the last set of each exercise to failure."
+        }
+    }
+
+    /// Shown on the workout screen.
+    var effort: String {
+        switch self {
+        case .normal: return "Stop about 2 reps short of failure"
+        case .high: return "Stop 1 rep short of failure"
+        case .max: return "Last set of each exercise to failure"
+        }
+    }
+
+    private var restScale: Double {
+        switch self {
+        case .normal: return 1
+        case .high: return 0.75
+        case .max: return 0.6
+        }
+    }
+
+    /// Shorter rest, but never below a floor that keeps the next set useful.
+    func rest(_ seconds: Int, compound: Bool) -> Int {
+        guard self != .normal else { return seconds }
+        let floor = compound ? 60 : 30
+        if seconds <= floor { return seconds }
+        let scaled = Int((Double(seconds) * restScale / 5).rounded()) * 5
+        return max(floor, scaled)
+    }
+}
+
 struct Plan: Codable, Equatable {
     var program: ProgramID = .upperLower
     var days: Int = 4
@@ -160,12 +210,14 @@ struct Plan: Codable, Equatable {
     var weekdays: [Int]? = nil
     /// Muscle raw value → focus. Missing means keep.
     var focus: [String: Focus] = [:]
+    var intensity: Intensity = .normal
 
-    init(program: ProgramID = .upperLower, days: Int = 4, weekdays: [Int]? = nil, focus: [String: Focus] = [:]) {
+    init(program: ProgramID = .upperLower, days: Int = 4, weekdays: [Int]? = nil, focus: [String: Focus] = [:], intensity: Intensity = .normal) {
         self.program = program
         self.days = days
         self.weekdays = weekdays
         self.focus = focus
+        self.intensity = intensity
     }
 
     init(from decoder: Decoder) throws {
@@ -174,6 +226,7 @@ struct Plan: Codable, Equatable {
         days = (try? c.decodeIfPresent(Int.self, forKey: .days)) ?? 4
         weekdays = try? c.decodeIfPresent([Int].self, forKey: .weekdays)
         focus = (try? c.decodeIfPresent([String: Focus].self, forKey: .focus)) ?? [:]
+        intensity = (try? c.decodeIfPresent(Intensity.self, forKey: .intensity)) ?? .normal
     }
 
     /// A library program at its default (or given) days, with its default focus.
@@ -197,6 +250,12 @@ struct Plan: Codable, Equatable {
     }
 
     func focus(for m: Muscle) -> Focus { focus[m.rawValue] ?? .keep }
+
+    func with(_ intensity: Intensity) -> Plan {
+        var p = self
+        p.intensity = intensity
+        return p
+    }
 
     var growCount: Int { focus.values.filter { $0 == .grow }.count }
 
@@ -240,7 +299,9 @@ struct Plan: Codable, Equatable {
     }
 
     /// Sets for one exercise after program and focus adjustments.
-    func sets(_ base: Int, for muscle: Muscle?) -> Int {
+    /// `accessory` is any slot after the first three, which hold each day's main squat or hinge,
+    /// push and pull. Max drops a set there, except on muscles you're growing.
+    func sets(_ base: Int, for muscle: Muscle?, accessory: Bool = false) -> Int {
         var delta = program.setDelta
         if let muscle {
             switch focus(for: muscle) {
@@ -248,6 +309,9 @@ struct Plan: Codable, Equatable {
             case .light: delta -= 1
             case .keep: break
             }
+        }
+        if intensity == .max, accessory, muscle.map({ focus(for: $0) != .grow }) ?? true {
+            delta -= 1
         }
         return max(2, min(6, base + delta))
     }
@@ -257,7 +321,8 @@ struct Plan: Codable, Equatable {
     var isFixed: Bool { weekdays != nil }
 
     var name: String {
-        "\(program.name) · \(days.counted("day"))"
+        let base = "\(program.name) · \(days.counted("day"))"
+        return intensity == .normal ? base : base + " · " + intensity.name
     }
 
     /// The split, described for the builder.

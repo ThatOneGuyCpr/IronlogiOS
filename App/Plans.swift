@@ -172,6 +172,8 @@ struct ProgramDetailView: View {
     let program: ProgramID
     var onDone: () -> Void
     @State private var days: Int
+    @State private var intensity: Intensity = .normal
+    @State private var seeded = false
 
     init(program: ProgramID, onDone: @escaping () -> Void) {
         self.program = program
@@ -181,6 +183,7 @@ struct ProgramDetailView: View {
 
     var body: some View {
         let plan = Plan.standard(program, days: days, weekdays: .some(store.data.plan.weekdays == nil ? nil : Plan.defaultWeekdays(days)))
+            .with(intensity)
         ScrollView {
             VStack(alignment: .leading, spacing: 14) {
                 Text(program.blurb)
@@ -193,6 +196,8 @@ struct ProgramDetailView: View {
                     }
                     .pickerStyle(.segmented)
                 }
+
+                IntensityPicker(plan: plan, selection: $intensity)
 
                 VStack(alignment: .leading, spacing: 10) {
                     HStack {
@@ -237,6 +242,12 @@ struct ProgramDetailView: View {
             .padding(.bottom, 30)
         }
         .background { SkyBackground() }
+        .onAppear {
+            // Keep the intensity you already train at when browsing programs.
+            guard !seeded else { return }
+            seeded = true
+            intensity = store.data.plan.intensity
+        }
         .navigationTitle(program.name)
     }
 
@@ -258,18 +269,61 @@ struct ProgramDetailView: View {
     }
 }
 
+/// Normal, High or Max, each with the session length it works out to.
+struct IntensityPicker: View {
+    @EnvironmentObject private var store: Store
+    let plan: Plan
+    @Binding var selection: Intensity
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("INTENSITY")
+                .font(Theme.font(size: 12, weight: .bold)).tracking(0.6)
+                .foregroundStyle(Theme.sub)
+            HStack(spacing: 6) {
+                ForEach(Intensity.allCases) { level in
+                    let on = selection == level
+                    Button {
+                        withAnimation(.snappy) { selection = level }
+                    } label: {
+                        VStack(spacing: 2) {
+                            Text(level.name)
+                                .font(Theme.font(size: 15, weight: .bold))
+                            Text("~\(PlanMath.minutes(plan.with(level), store: store)) min")
+                                .font(Theme.font(size: 12, weight: .semibold))
+                                .opacity(0.8)
+                        }
+                        .frame(maxWidth: .infinity, minHeight: 54)
+                        .background(on ? Theme.accent : Theme.card, in: RoundedRectangle(cornerRadius: Theme.radius(14), style: .continuous))
+                        .foregroundStyle(on ? Theme.accentInk : Theme.ink)
+                        .overlay(RoundedRectangle(cornerRadius: Theme.radius(14), style: .continuous).stroke(Theme.cardBorder, lineWidth: 1))
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("\(level.name), about \(PlanMath.minutes(plan.with(level), store: store)) minutes")
+                    .accessibilityAddTraits(on ? .isSelected : [])
+                }
+            }
+            Text(selection.blurb)
+                .font(Theme.font(size: 13))
+                .foregroundStyle(Theme.sub)
+                .fixedSize(horizontal: false, vertical: true)
+            if selection == .max {
+                Text("Your first three lifts each day and any muscle you're growing keep every set.")
+                    .font(Theme.font(size: 13, weight: .semibold))
+                    .foregroundStyle(Theme.accentText)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+    }
+}
+
 enum PlanMath {
     @MainActor
     static func minutes(_ plan: Plan, store: Store) -> Int {
-        let per = plan.rotation.map { routine -> Int in
-            store.plan(routine).compactMap { $0 }.reduce(0) { total, ex in
-                let p = store.basePrescription(ex.id)
-                return total + plan.sets(p.sets, for: Library.muscleByID[ex.id]) * (45 + p.rest)
-            }
-        }
+        let per = plan.rotation.map { store.estimatedMinutes($0, plan: plan) }
         guard !per.isEmpty else { return 0 }
         let avg = Double(per.reduce(0, +)) / Double(per.count)
-        return max(5, Int((avg / 300).rounded()) * 5)
+        return max(5, Int((avg / 5).rounded()) * 5)
     }
 }
 
@@ -357,6 +411,7 @@ struct PlanBuilderView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 14) {
                 daysSection
+                IntensityPicker(plan: plan, selection: $plan.intensity)
                 whenSection
                 focusSection
                 SetsCard(plan: plan)

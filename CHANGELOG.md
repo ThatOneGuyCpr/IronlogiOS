@@ -4,6 +4,16 @@ Versions follow `MAJOR.MINOR.PATCH`. Everything before 1.0.0 is pre-launch.
 Bump MINOR for new features, PATCH for fixes, in `project.yml` (`MARKETING_VERSION`).
 Releases show only the version number.
 
+## 0.10.0
+- Intensity for every plan: Normal, High or Max. Pick it when you preview a program or tune your plan; each option shows the session length it works out to.
+  - Normal: full rest, stop about 2 reps short of failure.
+  - High: rest cut by a quarter, stop 1 rep short.
+  - Max: shortest rest, and one less set after each day's first three lifts. Last set of each exercise to failure. Muscles you're growing keep every set.
+  - Rest never drops below 60s on compound lifts or 30s on everything else.
+- The workout screen shows the effort cue for High and Max.
+- Session times are closer to real life: they count setup between exercises, and a superset pair now shares one rest.
+- Weekly set counts on plans reflect the intensity.
+
 ## 0.9.1
 - The theme picker restyles itself as you tap through themes (background, title and type) and stays on the one you picked.
 - Nothing hides under a theme's tab bar anymore: Discard workout, Erase all data and the bottom of every list scroll clear of it, and the rest timer sits above it.
