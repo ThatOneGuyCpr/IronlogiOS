@@ -199,7 +199,7 @@ enum Intensity: String, Codable, CaseIterable, Identifiable {
         let floor = compound ? 60 : 30
         if seconds <= floor { return seconds }
         let scaled = Int((Double(seconds) * restScale / 5).rounded()) * 5
-        return max(floor, scaled)
+        return Swift.max(floor, scaled)
     }
 }
 
