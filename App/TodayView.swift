@@ -174,6 +174,8 @@ struct TodayView: View {
             .padding(.horizontal, -20)
             .padding(.top, -8)
             .padding(.bottom, 6)
+        case .poster:
+            posterHeader
         case .bug:
             VStack(alignment: .leading, spacing: 10) {
                 HStack(spacing: 2) {
@@ -204,6 +206,38 @@ struct TodayView: View {
                     headerButtons
                 }
             }
+        }
+    }
+
+    /// Swiss: a dateline, the plan, a red square, then a heavy rule.
+    private var posterHeader: some View {
+        VStack(spacing: 12) {
+            HStack(spacing: 10) {
+                Text(Date().formatted(.dateTime.weekday(.abbreviated)).uppercased() + " " + Date().formatted(.dateTime.day(.twoDigits).month(.twoDigits).year(.twoDigits)).replacingOccurrences(of: "/", with: "."))
+                Spacer(minLength: 6)
+                Button {
+                    showPlans = true
+                } label: {
+                    Text(store.data.plan.name.uppercased())
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.7)
+                }
+                .accessibilityLabel("Plan: \(store.data.plan.name). Change plan")
+                Button {
+                    showEquipment = true
+                } label: {
+                    Rectangle()
+                        .fill(Theme.accent)
+                        .frame(width: 22, height: 22)
+                        .overlay(Image(systemName: "dumbbell.fill").font(.system(size: 10, weight: .bold)).foregroundStyle(Theme.accentInk))
+                }
+                .accessibilityLabel("What's open")
+            }
+            .font(Theme.label(12, .bold))
+            .tracking(0.5)
+            .foregroundStyle(Theme.ink)
+            .buttonStyle(.plain)
+            Rectangle().fill(Theme.ink).frame(height: 4)
         }
     }
 
@@ -257,6 +291,7 @@ struct TodayView: View {
         case .mainEvent: mainEventHero
         case .lowerThird: lowerThirdHero
         case .mission: missionHero
+        case .poster: posterHero
         }
     }
 
@@ -351,6 +386,63 @@ struct TodayView: View {
             }
             .buttonStyle(.plain)
         }
+    }
+
+    /// Swiss poster: huge title, a heavy bar, three numbers, a red start block.
+    private var posterHero: some View {
+        let title = routine.title.uppercased()
+        let split: String = {
+            guard let space = title.lastIndex(of: " ") else { return title }
+            return String(title[..<space]) + "\n" + String(title[title.index(after: space)...])
+        }()
+        let rotation = store.data.plan.rotation
+        let place = (rotation.firstIndex(of: routine) ?? 0) + 1
+        let count = max(1, rotation.count)
+        return VStack(alignment: .leading, spacing: 0) {
+            HStack(alignment: .top) {
+                Text(split)
+                    .font(Theme.display(Theme.skin.heroSize))
+                    .lineSpacing(-14)
+                    .lineLimit(2)
+                    .minimumScaleFactor(0.45)
+                    .foregroundStyle(Theme.ink)
+                    .tracking(-1.5)
+                Spacer(minLength: 8)
+                VStack(alignment: .trailing, spacing: 2) {
+                    Text(kicker == Theme.words.upNext ? "NEXT" : "PICKED")
+                        .foregroundStyle(Theme.sub)
+                    Text(String(format: "%02d/%02d", place, count))
+                        .foregroundStyle(Theme.ink)
+                }
+                .font(Theme.display(15))
+                .padding(.top, 6)
+            }
+            Text(routine.subtitle + ".")
+                .font(Theme.font(size: 17, weight: .medium))
+                .foregroundStyle(Theme.ink)
+                .padding(.top, 10)
+            Rectangle().fill(Theme.ink).frame(height: 12).padding(.top, 16)
+            HStack(alignment: .top, spacing: 0) {
+                posterStat(String(format: "%02d", exerciseCount), "EXERCISES")
+                posterStat("\(store.estimatedMinutes(routine))", "MINUTES")
+                Button { showEquipment = true } label: {
+                    posterStat(takenCount == 0 ? "OK" : String(format: "%02d", takenCount), takenCount == 0 ? "EQUIPMENT" : "TAKEN")
+                }
+                .buttonStyle(.plain)
+            }
+            .padding(.vertical, 10)
+            .overlay(alignment: .bottom) { Rectangle().fill(Theme.ink).frame(height: 2) }
+            startButton
+                .padding(.top, 14)
+        }
+    }
+
+    private func posterStat(_ value: String, _ label: String) -> some View {
+        VStack(alignment: .leading, spacing: 3) {
+            Text(value).font(Theme.display(26)).foregroundStyle(Theme.ink)
+            Text(label).font(Theme.label(11, .bold)).tracking(0.6).foregroundStyle(Theme.sub)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     /// 80s fight poster: banner, chrome title, "VS." the muscles.
@@ -559,8 +651,8 @@ struct TodayView: View {
                             .foregroundStyle(Theme.ink)
                         GeometryReader { geo in
                             ZStack(alignment: .leading) {
-                                Capsule().fill(Theme.faint)
-                                Capsule().fill(Theme.accent).frame(width: geo.size.width * min(1, CGFloat(d) / CGFloat(p)))
+                                RoundedRectangle(cornerRadius: Theme.pill, style: .circular).fill(Theme.faint)
+                                RoundedRectangle(cornerRadius: Theme.pill, style: .circular).fill(Theme.accent).frame(width: geo.size.width * min(1, CGFloat(d) / CGFloat(p)))
                             }
                         }
                         .frame(height: 4)
@@ -920,7 +1012,7 @@ struct TodayView: View {
                     .font(Theme.font(size: 13, weight: .semibold))
                     .foregroundStyle(Theme.accentText)
             }
-            .padding(.horizontal, 18)
+            .padding(.horizontal, Theme.skin.card == .swiss ? 0 : 18)
             .padding(.top, 16)
             .padding(.bottom, 6)
             ForEach(Array(routine.active(store.data.plan.intensity).enumerated()), id: \.element) { n, i in
@@ -939,13 +1031,22 @@ private struct LineupRow: View {
     let routine: RoutineID
     @State private var showClip = false
 
+    private var swiss: Bool { Theme.skin.card == .swiss }
+
     var body: some View {
         HStack(spacing: 14) {
-            Text("\(index)")
-                .font(Theme.font(size: 13, weight: .bold))
-                .frame(width: 28, height: 28)
-                .background(Theme.accentSoft, in: RoundedRectangle(cornerRadius: Theme.radius(9), style: .continuous))
-                .foregroundStyle(Theme.accentText)
+            if swiss {
+                Text(String(format: "%02d", index))
+                    .font(Theme.display(14))
+                    .foregroundStyle(index == 1 ? Theme.accentText : Theme.sub)
+                    .frame(width: 28, alignment: .leading)
+            } else {
+                Text("\(index)")
+                    .font(Theme.font(size: 13, weight: .bold))
+                    .frame(width: 28, height: 28)
+                    .background(Theme.accentSoft, in: RoundedRectangle(cornerRadius: Theme.radius(9), style: .continuous))
+                    .foregroundStyle(Theme.accentText)
+            }
             VStack(alignment: .leading, spacing: 2) {
                 HStack(spacing: 6) {
                     Text(exercise?.name ?? "Nothing open for \(slot.label.lowercased())")
@@ -984,10 +1085,10 @@ private struct LineupRow: View {
                 }
             }
         }
-        .padding(.horizontal, 18)
+        .padding(.horizontal, swiss ? 0 : 18)
         .padding(.vertical, 12)
         .overlay(alignment: .top) {
-            Rectangle().fill(Theme.faint).frame(height: 1)
+            Rectangle().fill(swiss ? Theme.ink : Theme.faint).frame(height: swiss ? 2 : 1)
         }
     }
 }
@@ -1015,7 +1116,7 @@ struct EquipmentChips: View {
                     }
                     .padding(.horizontal, 12)
                     .frame(minHeight: 44)
-                    .background(isOpen ? Theme.accentSoft : Theme.chip, in: Capsule())
+                    .background(isOpen ? Theme.accentSoft : Theme.chip, in: RoundedRectangle(cornerRadius: Theme.pill, style: .circular))
                 }
                 .buttonStyle(.plain)
             }

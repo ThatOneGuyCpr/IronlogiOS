@@ -4,6 +4,18 @@ Versions follow `MAJOR.MINOR.PATCH`. Everything before 1.0.0 is pre-launch.
 Bump MINOR for new features, PATCH for fixes, in `project.yml` (`MARKETING_VERSION`).
 Releases show only the version number.
 
+## 0.11.0
+- Rest timer: take 15 seconds off as well as adding 15, on both the bar and the big ring. Taking it past zero ends the rest.
+- App icon picker: every icon in one grid with its name under it. Locked icons show what unlocks them.
+- Swiss, in detail:
+  - Train opens like the poster: a dateline with your plan and a red square for what's open, a heavy rule, then the workout's name set huge with its place in the week (03/04). A black bar, then exercises, minutes and equipment as big numbers, and the red Start block.
+  - The lineup is numbered 01, 02, 03 in red and gray with black rules between rows.
+  - Section titles are small caps; buttons, chips and the workout card's round buttons are square with black outlines.
+  - The rest timer, Progress chart and pills go square, and the chart uses Swiss type.
+  - Widgets get the heavy top rule, and the lock screen timer is black.
+- Sheets (what's open, swap, sets and rest) use the theme's background and rows in every theme.
+- Pills, chips and progress bars are square in every square-cornered theme.
+
 ## 0.10.1
 - Intensity now sets how much you do, on every plan:
   - Normal: 6 exercises, about 35 minutes, with 15 seconds less rest.

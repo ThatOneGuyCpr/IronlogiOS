@@ -25,9 +25,9 @@ struct ProgramsView: View {
                                     .font(Theme.font(size: 13, weight: .bold))
                                     .padding(.horizontal, 12)
                                     .frame(height: 34)
-                                    .background(filter == f ? Theme.ink : Theme.card, in: Capsule())
+                                    .background(filter == f ? Theme.ink : Theme.card, in: RoundedRectangle(cornerRadius: Theme.pill, style: .circular))
                                     .foregroundStyle(filter == f ? Theme.bg : Theme.ink)
-                                    .overlay(Capsule().stroke(Theme.cardBorder, lineWidth: 1))
+                                    .overlay(RoundedRectangle(cornerRadius: Theme.pill, style: .circular).stroke(Theme.cardBorder, lineWidth: 1))
                                     .buttonStyle(.plain)
                                     .accessibilityAddTraits(filter == f ? .isSelected : [])
                             }
@@ -101,13 +101,13 @@ private struct ProgramCard: View {
                     Text("CURRENT")
                         .font(Theme.font(size: 10, weight: .heavy)).tracking(0.8)
                         .padding(.horizontal, 8).padding(.vertical, 4)
-                        .background(Theme.accent, in: Capsule())
+                        .background(Theme.accent, in: RoundedRectangle(cornerRadius: Theme.pill, style: .circular))
                         .foregroundStyle(Theme.accentInk)
                 }
                 Text(program.daysLabel)
                     .font(Theme.font(size: 12, weight: .bold))
                     .padding(.horizontal, 8).padding(.vertical, 4)
-                    .background(Theme.accentSoft, in: Capsule())
+                    .background(Theme.accentSoft, in: RoundedRectangle(cornerRadius: Theme.pill, style: .circular))
                     .foregroundStyle(Theme.accentText)
             }
             Text(program.blurb)
@@ -353,14 +353,14 @@ struct SetsCard: View {
                     GeometryReader { geo in
                         let w = geo.size.width
                         ZStack(alignment: .leading) {
-                            Capsule().fill(Theme.faint)
+                            RoundedRectangle(cornerRadius: Theme.pill, style: .circular).fill(Theme.faint)
                             Rectangle().fill(Theme.accentSoft)
                                 .frame(width: w * 10 / 24)
                                 .offset(x: w * 10 / 24)
-                            Capsule().fill(v >= 10 ? Theme.accent : Theme.accent.opacity(0.55))
+                            RoundedRectangle(cornerRadius: Theme.pill, style: .circular).fill(v >= 10 ? Theme.accent : Theme.accent.opacity(0.55))
                                 .frame(width: max(4, w * min(1, CGFloat(v) / 24)))
                         }
-                        .clipShape(Capsule())
+                        .clipShape(RoundedRectangle(cornerRadius: Theme.pill, style: .circular))
                     }
                     .frame(height: 10)
                     Text("\(v)")

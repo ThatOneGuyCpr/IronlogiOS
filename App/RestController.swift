@@ -58,9 +58,15 @@ final class RestController: ObservableObject {
         armEnd(end)
     }
 
+    /// Adds or takes away rest. Taking it down to zero ends the rest.
     func add(_ seconds: Int) {
         guard let end = endsAt, var state = lastState else { return }
         let newEnd = end.addingTimeInterval(TimeInterval(seconds))
+        if newEnd.timeIntervalSinceNow < 1 {
+            skip()
+            UINotificationFeedbackGenerator().notificationOccurred(.success)
+            return
+        }
         endsAt = newEnd
         state.restEndsAt = newEnd
         lastState = state

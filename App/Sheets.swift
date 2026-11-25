@@ -10,6 +10,7 @@ struct EquipmentSheet: View {
     var body: some View {
         NavigationStack {
             List {
+                Group {
                 Section {
                     ForEach(Equipment.allCases) { eq in
                         Toggle(eq.name, isOn: Binding(
@@ -38,7 +39,10 @@ struct EquipmentSheet: View {
                         }
                     }
                 }
+                }
+                .listRowBackground(Theme.row)
             }
+            .themedList()
             .navigationTitle("What's open")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -105,6 +109,7 @@ struct SwapSheet: View {
     var body: some View {
         NavigationStack {
             List {
+                Group {
                 if let s = store.data.session, let item = s.items[safe: index], let slot = s.routine.slots[safe: item.slot] {
                     let others = Set(s.items.enumerated().filter { $0.offset != index }.compactMap { $0.element.exerciseID })
                     Section {
@@ -120,15 +125,15 @@ struct SwapSheet: View {
                                     HStack {
                                         VStack(alignment: .leading, spacing: 2) {
                                             Text(ex.name)
-                                                .foregroundStyle(ok ? Color.primary : Color.secondary)
+                                                .foregroundStyle(ok ? Theme.ink : Theme.sub)
                                             Text(store.prescription(id).summary(for: ex))
                                                 .font(Theme.style(.caption))
-                                                .foregroundStyle(.secondary)
+                                                .foregroundStyle(Theme.sub)
                                         }
                                         Spacer()
                                         Text(current ? "Current" : inWorkout ? "In workout" : store.missingReason(id))
                                             .font(Theme.style(.caption))
-                                            .foregroundStyle(Theme.accent)
+                                            .foregroundStyle(Theme.accentText)
                                     }
                                 }
                                 .disabled(!ok)
@@ -140,7 +145,10 @@ struct SwapSheet: View {
                         }
                     }
                 }
+                }
+                .listRowBackground(Theme.row)
             }
+            .themedList()
             .navigationTitle(title)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -171,6 +179,7 @@ struct ExerciseSettingsSheet: View {
         let unit = (ex?.timed ?? false) ? "Seconds" : "Reps"
         NavigationStack {
             Form {
+                Group {
                 Section {
                     Stepper("Sets: \(p.sets)", value: $p.sets, in: 1...8)
                     Stepper("\(unit), low end: \(p.low)", value: $p.low, in: 1...300, step: (ex?.timed ?? false) ? 5 : 1)
@@ -186,7 +195,10 @@ struct ExerciseSettingsSheet: View {
                         Button("Reset to default") { p = ex.preset }
                     }
                 }
+                }
+                .listRowBackground(Theme.row)
             }
+            .themedList()
             .navigationTitle(ex?.name ?? "Exercise")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

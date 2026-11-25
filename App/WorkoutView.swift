@@ -186,8 +186,8 @@ struct WorkoutView: View {
                 let fraction = item.sets.isEmpty ? 0 : Double(item.doneCount) / Double(item.sets.count)
                 GeometryReader { geo in
                     ZStack(alignment: .leading) {
-                        Capsule().fill(Theme.faint)
-                        Capsule().fill(item.skipped ? Theme.sub.opacity(0.4) : Theme.accent)
+                        RoundedRectangle(cornerRadius: Theme.pill, style: .circular).fill(Theme.faint)
+                        RoundedRectangle(cornerRadius: Theme.pill, style: .circular).fill(item.skipped ? Theme.sub.opacity(0.4) : Theme.accent)
                             .frame(width: item.skipped ? geo.size.width : geo.size.width * fraction)
                     }
                 }
@@ -337,7 +337,7 @@ struct FocusCard: View {
                         Image(systemName: "play.fill")
                             .font(Theme.font(size: 13, weight: .bold))
                             .frame(width: 36, height: 36)
-                            .overlay(Circle().stroke(Theme.fieldBorder, lineWidth: 1))
+                            .overlay(RoundedRectangle(cornerRadius: Theme.pill, style: .circular).stroke(Theme.edge, lineWidth: Theme.lineWidth))
                             .foregroundStyle(Theme.accentText)
                     }
                     .buttonStyle(.plain)
@@ -348,7 +348,7 @@ struct FocusCard: View {
                         Image(systemName: "chevron.up")
                             .font(Theme.font(size: 14, weight: .bold))
                             .frame(width: 36, height: 36)
-                            .overlay(Circle().stroke(Theme.fieldBorder, lineWidth: 1))
+                            .overlay(RoundedRectangle(cornerRadius: Theme.pill, style: .circular).stroke(Theme.edge, lineWidth: Theme.lineWidth))
                             .foregroundStyle(Theme.sub)
                     }
                     .buttonStyle(.plain)
@@ -375,7 +375,7 @@ struct FocusCard: View {
                         Image(systemName: "ellipsis")
                             .font(Theme.font(size: 16, weight: .bold))
                             .frame(width: 36, height: 36)
-                            .overlay(Circle().stroke(Theme.fieldBorder, lineWidth: 1))
+                            .overlay(RoundedRectangle(cornerRadius: Theme.pill, style: .circular).stroke(Theme.edge, lineWidth: Theme.lineWidth))
                             .foregroundStyle(Theme.sub)
                     }
                     .accessibilityLabel("More options")
@@ -644,7 +644,7 @@ struct RestBar: View {
     var body: some View {
         if let end = rest.endsAt, let start = rest.startedAt {
             let range = start...max(start, end)
-            HStack(spacing: 14) {
+            HStack(spacing: 8) {
                 TimelineView(.periodic(from: .now, by: 0.2)) { context in
                     let total = max(1, end.timeIntervalSince(start))
                     let left = max(0, end.timeIntervalSince(context.date))
@@ -655,7 +655,7 @@ struct RestBar: View {
                             .stroke(Theme.accentInk, style: StrokeStyle(lineWidth: 5, lineCap: .round))
                             .rotationEffect(.degrees(-90))
                     }
-                    .frame(width: 48, height: 48)
+                    .frame(width: 40, height: 40)
                 }
                 .accessibilityHidden(true)
                 VStack(alignment: .leading, spacing: 0) {
@@ -664,19 +664,27 @@ struct RestBar: View {
                         .tracking(1)
                         .opacity(0.85)
                     Text(timerInterval: range, countsDown: true)
-                        .font(Theme.num(30))
+                        .font(Theme.num(28))
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.7)
                 }
+                .padding(.leading, 4)
                 Spacer(minLength: 0)
-                Button("+15s") { rest.add(15) }
+                Button("−15") { rest.add(-15) }
                     .font(Theme.font(size: 15, weight: .bold))
-                    .frame(height: 44)
-                    .padding(.horizontal, 14)
-                    .background(Theme.accentInk.opacity(0.18), in: Capsule())
+                    .frame(width: 50, height: 44)
+                    .background(Theme.accentInk.opacity(0.18), in: RoundedRectangle(cornerRadius: Theme.pill, style: .circular))
+                    .accessibilityLabel("15 seconds less")
+                Button("+15") { rest.add(15) }
+                    .font(Theme.font(size: 15, weight: .bold))
+                    .frame(width: 50, height: 44)
+                    .background(Theme.accentInk.opacity(0.18), in: RoundedRectangle(cornerRadius: Theme.pill, style: .circular))
+                    .accessibilityLabel("15 seconds more")
                 Button("Skip") { rest.skip() }
                     .font(Theme.font(size: 15, weight: .bold))
                     .frame(height: 44)
-                    .padding(.horizontal, 16)
-                    .background(Theme.accentInk, in: Capsule())
+                    .padding(.horizontal, 14)
+                    .background(Theme.accentInk, in: RoundedRectangle(cornerRadius: Theme.pill, style: .circular))
                     .foregroundStyle(Theme.accent)
             }
             .foregroundStyle(Theme.accentInk)
@@ -699,14 +707,16 @@ struct RestRing: View {
     var body: some View {
         if let end = rest.endsAt, let start = rest.startedAt {
             let range = start...max(start, end)
+            VStack(spacing: 14) {
             HStack(spacing: 16) {
-                Button { rest.add(15) } label: {
-                    Text("+15s")
+                Button { rest.add(-15) } label: {
+                    Text("−15s")
                         .font(Theme.font(size: 15, weight: .bold))
                         .frame(width: 64, height: 64)
-                        .background(Theme.accentSoft, in: Circle())
+                        .background(Theme.accentSoft, in: RoundedRectangle(cornerRadius: Theme.pill, style: .circular))
                         .foregroundStyle(Theme.accentText)
                 }
+                .accessibilityLabel("15 seconds less")
                 ZStack {
                     TimelineView(.animation(minimumInterval: 1.0 / 30)) { context in
                         let total = max(1, end.timeIntervalSince(start))
@@ -733,19 +743,28 @@ struct RestRing: View {
                     }
                 }
                 .frame(width: 148, height: 148)
-                Button { rest.skip() } label: {
-                    Text("Skip")
+                Button { rest.add(15) } label: {
+                    Text("+15s")
                         .font(Theme.font(size: 15, weight: .bold))
                         .frame(width: 64, height: 64)
-                        .background(Theme.accent, in: Circle())
+                        .background(Theme.accentSoft, in: RoundedRectangle(cornerRadius: Theme.pill, style: .circular))
+                        .foregroundStyle(Theme.accentText)
+                }
+                .accessibilityLabel("15 seconds more")
+            }
+                Button { rest.skip() } label: {
+                    Text("Skip rest")
+                        .font(Theme.font(size: 15, weight: .bold))
+                        .frame(width: 160, height: 44)
+                        .background(Theme.accent, in: RoundedRectangle(cornerRadius: Theme.pill, style: .circular))
                         .foregroundStyle(Theme.accentInk)
                 }
             }
             .buttonStyle(.plain)
             .padding(.vertical, 16)
             .frame(maxWidth: .infinity)
-            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: Theme.radius(34), style: .continuous))
-            .overlay(RoundedRectangle(cornerRadius: Theme.radius(34), style: .continuous).stroke(Theme.cardBorder, lineWidth: 1))
+            .background(Theme.skin.isGlacier ? AnyShapeStyle(.regularMaterial) : AnyShapeStyle(Theme.bg), in: RoundedRectangle(cornerRadius: Theme.radius(34), style: .continuous))
+            .overlay(RoundedRectangle(cornerRadius: Theme.radius(34), style: .continuous).stroke(Theme.cardBorder, lineWidth: Theme.lineWidth))
             .shadow(color: Theme.shadow, radius: 18, y: 8)
         }
     }

@@ -97,7 +97,7 @@ struct IconPicker: View {
     @State private var suggestion: Palette?
     @State private var error: String?
 
-    private let columns = [GridItem(.adaptive(minimum: 64, maximum: 80), spacing: 14)]
+    private let columns = Array(repeating: GridItem(.flexible(), spacing: 10), count: 4)
 
     var body: some View {
         let totals: Store.TrainingTotals? = store.data.unlockIcons ? store.trainingTotals() : nil
@@ -107,17 +107,9 @@ struct IconPicker: View {
                     .font(Theme.font(size: 12, weight: .semibold))
                     .foregroundStyle(Theme.sub)
             }
-            ForEach(AppIcons.groups, id: \.self) { group in
-                VStack(alignment: .leading, spacing: 8) {
-                    Text(group.uppercased())
-                        .font(Theme.font(size: 11, weight: .bold))
-                        .tracking(0.8)
-                        .foregroundStyle(Theme.sub)
-                    LazyVGrid(columns: columns, alignment: .leading, spacing: 12) {
-                        ForEach(AppIcons.all.filter { $0.group == group }) { option in
-                            cell(option, locked: totals.map { !store.isUnlocked(option, totals: $0) } ?? false)
-                        }
-                    }
+            LazyVGrid(columns: columns, alignment: .leading, spacing: 16) {
+                ForEach(AppIcons.all) { option in
+                    cell(option, locked: totals.map { !store.isUnlocked(option, totals: $0) } ?? false)
                 }
             }
             if let suggestion {
@@ -189,11 +181,18 @@ struct IconPicker: View {
                             .stroke(selected ? Theme.accent : Color.clear, lineWidth: 2.5)
                             .padding(-3)
                     )
-                Text(locked ? (option.unlock?.text ?? option.name) : option.name)
+                Text(option.name)
                     .font(Theme.font(size: 11, weight: selected ? .bold : .medium))
-                    .foregroundStyle(selected ? Theme.accentText : Theme.sub)
+                    .foregroundStyle(selected ? Theme.accentText : Theme.ink)
                     .lineLimit(1)
-                    .minimumScaleFactor(0.8)
+                    .minimumScaleFactor(0.75)
+                if locked, let unlock = option.unlock {
+                    Text(unlock.text)
+                        .font(Theme.font(size: 9.5))
+                        .foregroundStyle(Theme.sub)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.75)
+                }
             }
             .frame(maxWidth: .infinity)
         }

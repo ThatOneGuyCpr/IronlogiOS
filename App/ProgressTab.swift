@@ -101,9 +101,10 @@ struct ProgressTab: View {
                 Chart(points) { p in
                     LineMark(x: .value("Session", p.id), y: .value("Weight", p.weight))
                         .interpolationMethod(.monotone)
-                        .lineStyle(StrokeStyle(lineWidth: 3, lineCap: .round, lineJoin: .round))
+                        .lineStyle(StrokeStyle(lineWidth: 3, lineCap: Theme.squareCorners ? .square : .round, lineJoin: Theme.squareCorners ? .miter : .round))
                         .foregroundStyle(Theme.accent)
                     PointMark(x: .value("Session", p.id), y: .value("Weight", p.weight))
+                        .symbol(Theme.squareCorners ? BasicChartSymbolShape.square : BasicChartSymbolShape.circle)
                         .symbolSize(p.id == points.count - 1 ? 70 : 24)
                         .foregroundStyle(Theme.accent)
                 }
@@ -112,7 +113,7 @@ struct ProgressTab: View {
                 .chartYAxis {
                     AxisMarks(position: .leading, values: .automatic(desiredCount: 3)) { _ in
                         AxisGridLine().foregroundStyle(Theme.faint)
-                        AxisValueLabel().foregroundStyle(Theme.sub)
+                        AxisValueLabel().font(Theme.font(size: 11, weight: .semibold)).foregroundStyle(Theme.sub)
                     }
                 }
                 .frame(height: 140)

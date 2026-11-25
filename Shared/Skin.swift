@@ -124,8 +124,8 @@ enum Backdrop { case glacier, dots, paper, scanlines, plain, aurora, dither, ray
 enum ButtonLook { case glacier, block, ink, prompt, swiss, gel, mac, bell, skew, vice }
 enum TabLook { case system, block, text, taskbar, window, ropes, underline, pause }
 enum DotLook { case circle, gloss, square, checkbox, skew, blip, text, score }
-enum HeroLook { case standard, mainEvent, lowerThird, mission }
-enum HeaderLook { case standard, masthead, prompt, hud, menubar, bug }
+enum HeroLook { case standard, mainEvent, lowerThird, mission, poster }
+enum HeaderLook { case standard, masthead, prompt, hud, menubar, bug, poster }
 
 struct SkinWords {
     var train = "Train"
@@ -305,10 +305,10 @@ struct Skin: Identifiable {
             done: h(0x0D0D0D), doneInk: h(0xF7F7F7), good: h(0x1E7B34), warn: h(0xDA1F00),
             row: h(0xFFFFFF), tabBg: h(0xF7F7F7),
             widgetTop: h(0xFFFFFF), widgetBottom: h(0xF0F0F0), widgetInk: h(0x0D0D0D), widgetSub: h(0x6B6B6B),
-            widgetAccent: h(0xDA1F00), widgetAccentInk: h(0xFFFFFF), widgetFaint: h(0xE2E2E2), deep: h(0x6E1000)),
+            widgetAccent: h(0xDA1F00), widgetAccentInk: h(0xFFFFFF), widgetFaint: h(0xE2E2E2), deep: h(0x0D0D0D)),
         display: archivoBlack, body: archivo, label: archivo, number: archivoBlack,
         titleCaps: true, card: .swiss, backdrop: .plain, button: .swiss, tab: .text, dot: .square,
-        cardRadius: 0, heroSize: 64,
+        hero: .poster, header: .poster, cardRadius: 0, heroSize: 78,
         words: SkinWords(train: "TRAIN", upNext: "NEXT", picked: "PICKED", start: "START →", thisWeek: "WEEK",
                          lineup: "LINEUP", tabs: ["TRAIN", "PROGRESS", "HISTORY", "SETTINGS"], finish: "DONE."),
         icon: "poster")

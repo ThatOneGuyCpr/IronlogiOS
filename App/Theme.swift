@@ -141,6 +141,12 @@ enum Theme {
     }
 
     static var squareCorners: Bool { !skin.isGlacier && skin.cardRadius <= 2 }
+    /// Corner radius for pills and chips: a capsule, or square in square themes.
+    static var pill: CGFloat { squareCorners ? 0 : 999 }
+    /// Outline weight: heavier where the theme draws with rules.
+    static var lineWidth: CGFloat { skin.card == .swiss || skin.card == .window ? 2 : 1 }
+    /// Outline color for chips, buttons and fields.
+    static var edge: Color { skin.card == .swiss ? ink : fieldBorder }
     static func radius(_ glacier: CGFloat) -> CGFloat {
         skin.isGlacier ? glacier : min(glacier, skin.cardRadius)
     }
@@ -370,6 +376,18 @@ struct GlacierCard: ViewModifier {
 }
 
 extension View {
+    /// Lists and forms in sheets: the theme's background behind them instead of system gray.
+    @ViewBuilder
+    func themedList() -> some View {
+        if Theme.skin.isGlacier {
+            self
+        } else {
+            self
+                .scrollContentBackground(.hidden)
+                .background { SkyBackground(calm: true) }
+        }
+    }
+
     /// Keeps the bottom of a scrolling screen clear of a theme's tab bar.
     @ViewBuilder
     func tabBarClearance() -> some View {
@@ -562,8 +580,8 @@ struct ChipButtonStyle: ButtonStyle {
         let r = Theme.radius(12)
         configuration.label
             .foregroundStyle(Theme.ink)
-            .background(configuration.isPressed ? Theme.chip.opacity(0.7) : Theme.chip, in: RoundedRectangle(cornerRadius: r, style: .continuous))
-            .overlay(RoundedRectangle(cornerRadius: r, style: .continuous).stroke(Theme.fieldBorder, lineWidth: Theme.skin.card == .window ? 2 : 1))
+            .background(configuration.isPressed ? Theme.chip.opacity(0.7) : (Theme.skin.card == .swiss ? Color.clear : Theme.chip), in: RoundedRectangle(cornerRadius: r, style: .continuous))
+            .overlay(RoundedRectangle(cornerRadius: r, style: .continuous).stroke(Theme.edge, lineWidth: Theme.lineWidth))
     }
 }
 
@@ -572,9 +590,16 @@ struct SectionTitle: View {
     init(_ text: String) { self.text = text }
 
     var body: some View {
-        Text(text)
-            .font(Theme.skin.isGlacier ? .system(size: 15, weight: .bold) : Theme.label(15, .bold))
-            .foregroundStyle(Theme.ink)
+        if Theme.skin.card == .swiss {
+            Text(text.uppercased())
+                .font(Theme.label(12, .bold))
+                .tracking(0.9)
+                .foregroundStyle(Theme.ink)
+        } else {
+            Text(text)
+                .font(Theme.skin.isGlacier ? .system(size: 15, weight: .bold) : Theme.label(15, .bold))
+                .foregroundStyle(Theme.ink)
+        }
     }
 }
 
@@ -715,7 +740,7 @@ struct OutlineButtonStyle: ButtonStyle {
             .font(Theme.font(size: 15, weight: .semibold))
             .frame(maxWidth: .infinity, minHeight: 44)
             .background(configuration.isPressed ? Theme.chip : Color.clear, in: RoundedRectangle(cornerRadius: r, style: .continuous))
-            .overlay(RoundedRectangle(cornerRadius: r, style: .continuous).stroke(Theme.fieldBorder, lineWidth: Theme.skin.card == .window ? 2 : 1))
+            .overlay(RoundedRectangle(cornerRadius: r, style: .continuous).stroke(Theme.edge, lineWidth: Theme.lineWidth))
             .foregroundStyle(Theme.ink)
     }
 }

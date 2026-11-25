@@ -51,6 +51,12 @@ enum WP {
 struct WidgetSky: View {
     var body: some View {
         LinearGradient(colors: [WP.top, WP.bottom], startPoint: .topLeading, endPoint: .bottomTrailing)
+            .overlay(alignment: .top) {
+                // Swiss: the heavy rule that runs across the top of every screen.
+                if WP.skin.card == .swiss {
+                    Rectangle().fill(WP.ink).frame(height: 5)
+                }
+            }
     }
 }
 
